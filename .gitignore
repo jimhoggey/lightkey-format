@@ -1,0 +1,10 @@
+# Never commit real project files — they contain venue/rig data
+*.lightkeyproj
+*.lightkeyfxt
+*.lightkeylib
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.DS_Store
