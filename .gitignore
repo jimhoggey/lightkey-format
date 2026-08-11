@@ -8,3 +8,6 @@ __pycache__/
 .venv/
 venv/
 .DS_Store
+
+# built upload bundle — published as a release asset instead
+dist/

@@ -62,3 +62,18 @@ claude plugin details lightkey-patcher   # confirm the skill is discovered
 
 Bump `version` in **both** `.claude-plugin/plugin.json` and the marketplace entry when
 publishing changes — installed users only receive an update when the version string changes.
+
+### The claude.ai skill ZIP
+
+`tools/build_skill_zip.py` repackages the same sources for claude.ai's Skills upload, which
+needs `SKILL.md` at the root of the zipped folder and a description of 200 characters or
+less. It is generated, not committed (`dist/` is gitignored) — attach the built ZIP to a
+GitHub release so `releases/latest/download/lightkey-patcher-skill.zip` keeps working:
+
+```bash
+python3 tools/build_skill_zip.py
+gh release create v0.1.1 dist/lightkey-patcher-skill.zip --title "..." --notes "..."
+```
+
+If you edit `skills/lightkey-patcher/SKILL.md`, rebuild the ZIP and re-upload it to the
+release, otherwise claude.ai users stay on the old copy.

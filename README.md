@@ -56,6 +56,7 @@ agrees with what the presets are called.
 | `examples/build_dimmer_panel.py` | End-to-end: build a working radio-group dimmer panel |
 | `skills/lightkey-patcher/SKILL.md` | Entry point when used as a Claude Code skill or plugin |
 | `.claude-plugin/` | Plugin + marketplace manifests (see [Use it with Claude Code](#use-it-with-claude-code)) |
+| `tools/build_skill_zip.py` | Repackage the repo as a claude.ai skill ZIP upload |
 
 ## Use it with Claude Code
 
@@ -97,6 +98,37 @@ read the reference material and run the bundled tools directly:
 
 Update later with `/plugin marketplace update lightkey-format`, and remove it with
 `/plugin uninstall lightkey-patcher@lightkey-format`.
+
+### Install on claude.ai (web or desktop app) — upload a ZIP
+
+No terminal needed. claude.ai takes skills as a ZIP upload:
+
+1. **Download** [`lightkey-patcher-skill.zip`](https://github.com/jimhoggey/lightkey-format/releases/latest/download/lightkey-patcher-skill.zip)
+   (from [Releases](https://github.com/jimhoggey/lightkey-format/releases/latest) — see the
+   note below about why the green *Code → Download ZIP* button won't work).
+2. In Claude, open **Settings → Capabilities → Skills** (shown as **Customize → Skills** in
+   some versions) and click **Add** / **Create skill**.
+3. Upload the ZIP. It appears in your skills list with a toggle; leave it on.
+
+Claude then uses it automatically whenever you mention Lightkey or a `.lightkeyproj` file —
+you don't have to invoke it by name.
+
+**Requirements:** code execution must be enabled in your settings (the skill runs Python).
+Uploaded skills are private to your account.
+
+**Working with your project files on claude.ai** is different from the terminal: Claude has
+no access to your disk, so **upload your `.lightkeyproj` into the conversation**, and Claude
+gives the modified file back as a download. Keep your original — always.
+
+> **Why not the green "Code → Download ZIP" button?** That produces
+> `lightkey-format-main/` with `SKILL.md` buried at `skills/lightkey-patcher/SKILL.md`.
+> claude.ai requires `SKILL.md` at the top of the zipped folder and caps the skill
+> description at 200 characters, so that ZIP is rejected. The release asset is repackaged
+> for exactly this — same content, correct shape. Rebuild it yourself any time with:
+>
+> ```bash
+> python3 tools/build_skill_zip.py     # -> dist/lightkey-patcher-skill.zip
+> ```
 
 ### Install as a plain skill (no plugin system)
 
