@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "lightkey-format",
+  "description": "Tooling and reverse-engineered documentation for Lightkey's .lightkeyproj DMX project format",
+  "owner": {
+    "name": "jimhoggey",
+    "url": "https://github.com/jimhoggey"
+  },
+  "plugins": [
+    {
+      "name": "lightkey-patcher",
+      "source": "./",
+      "description": "Read, inspect and programmatically modify Lightkey .lightkeyproj DMX projects on macOS — format docs, 26 documented failure modes, colour-order probe, and a semantic validator.",
+      "version": "0.1.0",
+      "category": "productivity",
+      "tags": ["lightkey", "dmx", "stage-lighting", "macos", "file-format"]
+    }
+  ]
+}

@@ -38,3 +38,27 @@ as long as it says so.
 No dependencies beyond the standard library. Documentation over cleverness: every claim in
 `docs/` should be something you actually observed, and it's fine (encouraged) to say what
 you're unsure about.
+
+## The Claude Code plugin
+
+The repository root doubles as a Claude Code plugin (`.claude-plugin/plugin.json`) and as a
+single-plugin marketplace (`.claude-plugin/marketplace.json`, `"source": "./"`). That layout
+is deliberate: the plugin root is the repo root, so an installed plugin carries `docs/`,
+`lightkey/`, `tools/` and `examples/` with it and there is only one copy of everything.
+
+`skills/lightkey-patcher/SKILL.md` is the entry point. It should stay a short briefing that
+points into `docs/` — put detail in the docs, not in the skill, so it stays cheap to load.
+Its paths are written relative to the repo root (`docs/pitfalls.md`), which resolves for both
+plugin installs and the symlinked-skill install.
+
+If you change the manifests, validate and smoke-test the install:
+
+```bash
+claude plugin validate . --strict
+claude plugin marketplace add .          # from the repo's parent directory
+claude plugin install lightkey-patcher@lightkey-format
+claude plugin details lightkey-patcher   # confirm the skill is discovered
+```
+
+Bump `version` in **both** `.claude-plugin/plugin.json` and the marketplace entry when
+publishing changes — installed users only receive an update when the version string changes.

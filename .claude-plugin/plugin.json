@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "lightkey-patcher",
+  "displayName": "Lightkey Patcher",
+  "version": "0.1.0",
+  "description": "Read, inspect and programmatically modify Lightkey .lightkeyproj DMX projects on macOS — reverse-engineered format docs, 26 documented failure modes, colour-order probe, and a semantic validator.",
+  "author": {
+    "name": "lightkey-format contributors",
+    "url": "https://github.com/jimhoggey/lightkey-format"
+  },
+  "homepage": "https://github.com/jimhoggey/lightkey-format",
+  "repository": "https://github.com/jimhoggey/lightkey-format",
+  "license": "MIT",
+  "keywords": [
+    "lightkey",
+    "lightkeyproj",
+    "dmx",
+    "dmx512",
+    "stage-lighting",
+    "lighting-control",
+    "macos",
+    "nskeyedarchiver",
+    "plist",
+    "file-format"
+  ]
+}

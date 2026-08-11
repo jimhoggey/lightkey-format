@@ -54,11 +54,76 @@ agrees with what the presets are called.
 | `tools/probe_colour.py` | CLI: prove the colour byte order against your own project |
 | `tools/extract_effects.py` | Pull native-effect blobs out of a reference project for cloning |
 | `examples/build_dimmer_panel.py` | End-to-end: build a working radio-group dimmer panel |
+| `skills/lightkey-patcher/SKILL.md` | Entry point when used as a Claude Code skill or plugin |
+| `.claude-plugin/` | Plugin + marketplace manifests (see [Use it with Claude Code](#use-it-with-claude-code)) |
 
-## Quick start
+## Use it with Claude Code
+
+This repo is also a **Claude Code plugin**. Installing it gives Claude the whole
+knowledge base — every schema, all 26 documented failure modes, the patterns, and the
+bundled Python — so you can just say *"add a colour bank to my Lightkey project"* and it
+works from hard-won knowledge instead of guessing at an undocumented binary format.
+
+### Install as a plugin (recommended)
+
+In Claude Code:
+
+```
+/plugin marketplace add jimhoggey/lightkey-format
+/plugin install lightkey-patcher@lightkey-format
+```
+
+Or from your shell:
 
 ```bash
-git clone https://github.com/<you>/lightkey-format
+claude plugin marketplace add jimhoggey/lightkey-format
+claude plugin install lightkey-patcher@lightkey-format
+```
+
+That's it — the skill activates automatically whenever you mention Lightkey, a
+`.lightkeyproj` file, or DMX lighting on macOS. It costs ~200 tokens of always-on context
+and loads the detailed references only when it actually fires.
+
+The installed plugin includes `docs/`, `lightkey/`, `tools/` and `examples/`, so Claude can
+read the reference material and run the bundled tools directly:
+
+```
+> my Lightkey reds are coming out blue
+      -> runs tools/probe_colour.py, finds the mis-packed presets, explains the byte order
+
+> build me a 5-step dimmer row for the front wash
+      -> reads docs/pitfalls.md, writes a builder, validates the output with lightkey/validate.py
+```
+
+Update later with `/plugin marketplace update lightkey-format`, and remove it with
+`/plugin uninstall lightkey-patcher@lightkey-format`.
+
+### Install as a plain skill (no plugin system)
+
+If you'd rather not use the plugin system, clone the repo and point a skill at it:
+
+```bash
+git clone https://github.com/jimhoggey/lightkey-format ~/.claude/lightkey-format
+mkdir -p ~/.claude/skills
+ln -s ~/.claude/lightkey-format/skills/lightkey-patcher ~/.claude/skills/lightkey-patcher
+```
+
+The skill's `SKILL.md` refers to `docs/…` and `lightkey/…` relative to the repo root, which
+the symlink preserves. For a project-scoped install, use `.claude/skills/` inside the
+project instead of `~/.claude/skills/`.
+
+### Use it with other AI coding tools
+
+There's nothing Claude-specific about the content. Point any assistant at
+[`skills/lightkey-patcher/SKILL.md`](skills/lightkey-patcher/SKILL.md) as its entry point —
+it's a plain markdown briefing that links onward into `docs/`. For Cursor, Copilot or
+similar, adding `SKILL.md` and `docs/pitfalls.md` to context is enough to avoid the
+expensive mistakes.
+
+## Quick start (no AI involved)
+
+```bash
+git clone https://github.com/jimhoggey/lightkey-format
 cd lightkey-format
 python3 tools/inspect_project.py ~/Documents/MyProject.lightkeyproj
 ```
