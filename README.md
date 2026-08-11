@@ -55,17 +55,101 @@ agrees with what the presets are called.
 | `tools/extract_effects.py` | Pull native-effect blobs out of a reference project for cloning |
 | `examples/build_dimmer_panel.py` | End-to-end: build a working radio-group dimmer panel |
 | `skills/lightkey-patcher/SKILL.md` | Entry point when used as a Claude Code skill or plugin |
-| `.claude-plugin/` | Plugin + marketplace manifests (see [Use it with Claude Code](#use-it-with-claude-code)) |
+| `.claude-plugin/` | Plugin + marketplace manifests (see [Use it with Claude](#use-it-with-claude)) |
 | `tools/build_skill_zip.py` | Repackage the repo as a claude.ai skill ZIP upload |
 
-## Use it with Claude Code
+## Use it with Claude
 
-This repo is also a **Claude Code plugin**. Installing it gives Claude the whole
-knowledge base — every schema, all 26 documented failure modes, the patterns, and the
-bundled Python — so you can just say *"add a colour bank to my Lightkey project"* and it
-works from hard-won knowledge instead of guessing at an undocumented binary format.
+Installing this gives Claude the whole knowledge base — every schema, all 26 documented
+failure modes, the patterns, and the bundled Python — so you can say *"add a colour bank to
+my Lightkey project"* and it works from hard-won knowledge instead of guessing at an
+undocumented binary format.
 
-### Install as a plugin (recommended)
+Pick whichever fits how you work:
+
+| You use… | Install | Best for |
+|---|---|---|
+| **Claude app / claude.ai** | [Upload the skill ZIP](#install-on-claudeai-upload-a-zip) — no terminal | Asking about a project, one-off edits |
+| **Claude Code** | [Plugin, two commands](#install-as-a-claude-code-plugin) | Iterating on a rig over many versions |
+| **Cursor / Copilot / other** | [Point it at `SKILL.md`](#use-it-with-other-ai-coding-tools) | Whatever you already use |
+
+### Install on claude.ai: upload a ZIP
+
+No terminal needed. claude.ai takes skills as a ZIP upload:
+
+1. **Download** [`lightkey-patcher-skill.zip`](https://github.com/jimhoggey/lightkey-format/releases/latest/download/lightkey-patcher-skill.zip)
+   (from [Releases](https://github.com/jimhoggey/lightkey-format/releases/latest) — see the
+   note below about why the green *Code → Download ZIP* button won't work).
+2. In Claude, open **Settings → Capabilities → Skills** (shown as **Customize → Skills** in
+   some versions) and click **Add** / **Create skill**.
+3. Upload the ZIP. It appears in your skills list with a toggle; leave it on.
+
+Claude then uses it automatically whenever you mention Lightkey or a `.lightkeyproj` file —
+you don't have to invoke it by name.
+
+**Requirements:** code execution must be enabled in your settings (the skill runs Python).
+Uploaded skills are private to your account.
+
+#### Using it
+
+Claude can't reach your disk on claude.ai, so the loop is **upload → ask → download**:
+
+1. **Find your project file.** Lightkey keeps it wherever you saved it — often
+   `~/Documents`. It's a single `.lightkeyproj` file.
+2. **Duplicate it first.** ⌘D in Finder. Work on the copy; never upload your only copy.
+3. **Attach the copy** to a new Claude conversation (the 📎 button) and ask for what you
+   want. The skill fires on its own.
+4. **Download the file Claude gives back**, then open it in Lightkey and test it on the rig
+   before a service or show.
+
+Things worth asking, roughly in order of how useful they are:
+
+```
+What's in this Lightkey project? List my fixtures, cues and preset groups.
+
+My reds are coming out blue on the actual lights — what's wrong?
+
+Add a House Lights row with Off / 10 / 25 / 50 / 100%, where pressing one
+turns the previous one off.
+
+Build me a colour bank: 8 warm looks for worship, mirrored left-to-right,
+and make them all release each other.
+
+Add a section of moving-head positions — stage, ceiling, and a slow sweep.
+
+Check this file I generated: is anything broken, and does the panel have
+text hidden behind buttons?
+```
+
+A realistic first session looks like this:
+
+```
+you    [attaches BackupChurch.lightkeyproj]
+       What's in this project, and are any of my colours wrong?
+
+Claude runs tools/inspect_project.py  → 34 fixtures, 145 cues, 18 preset groups,
+                                        old fpStore schema, 9 mutex groups
+       runs tools/probe_colour.py     → blue-low/red-high confirmed, and flags
+                                        "Col: Fire Red" as storing blue
+       …explains what it found and offers to fix the mis-packed presets
+```
+
+**Two habits worth keeping.** Ask Claude to *inspect before it edits* — the tooling is built
+around reading your file first, and a change made without that is a guess. And **test on the
+rig**, not just in the app: a project can open perfectly and still have a button wired to
+nothing. `docs/pitfalls.md` exists because all of these failures are silent.
+
+> **Why not the green "Code → Download ZIP" button?** That produces
+> `lightkey-format-main/` with `SKILL.md` buried at `skills/lightkey-patcher/SKILL.md`.
+> claude.ai requires `SKILL.md` at the top of the zipped folder and caps the skill
+> description at 200 characters, so that ZIP is rejected. The release asset is repackaged
+> for exactly this — same content, correct shape. Rebuild it yourself any time with:
+>
+> ```bash
+> python3 tools/build_skill_zip.py     # -> dist/lightkey-patcher-skill.zip
+> ```
+
+### Install as a Claude Code plugin
 
 In Claude Code:
 
@@ -98,37 +182,6 @@ read the reference material and run the bundled tools directly:
 
 Update later with `/plugin marketplace update lightkey-format`, and remove it with
 `/plugin uninstall lightkey-patcher@lightkey-format`.
-
-### Install on claude.ai (web or desktop app) — upload a ZIP
-
-No terminal needed. claude.ai takes skills as a ZIP upload:
-
-1. **Download** [`lightkey-patcher-skill.zip`](https://github.com/jimhoggey/lightkey-format/releases/latest/download/lightkey-patcher-skill.zip)
-   (from [Releases](https://github.com/jimhoggey/lightkey-format/releases/latest) — see the
-   note below about why the green *Code → Download ZIP* button won't work).
-2. In Claude, open **Settings → Capabilities → Skills** (shown as **Customize → Skills** in
-   some versions) and click **Add** / **Create skill**.
-3. Upload the ZIP. It appears in your skills list with a toggle; leave it on.
-
-Claude then uses it automatically whenever you mention Lightkey or a `.lightkeyproj` file —
-you don't have to invoke it by name.
-
-**Requirements:** code execution must be enabled in your settings (the skill runs Python).
-Uploaded skills are private to your account.
-
-**Working with your project files on claude.ai** is different from the terminal: Claude has
-no access to your disk, so **upload your `.lightkeyproj` into the conversation**, and Claude
-gives the modified file back as a download. Keep your original — always.
-
-> **Why not the green "Code → Download ZIP" button?** That produces
-> `lightkey-format-main/` with `SKILL.md` buried at `skills/lightkey-patcher/SKILL.md`.
-> claude.ai requires `SKILL.md` at the top of the zipped folder and caps the skill
-> description at 200 characters, so that ZIP is rejected. The release asset is repackaged
-> for exactly this — same content, correct shape. Rebuild it yourself any time with:
->
-> ```bash
-> python3 tools/build_skill_zip.py     # -> dist/lightkey-patcher-skill.zip
-> ```
 
 ### Install as a plain skill (no plugin system)
 
