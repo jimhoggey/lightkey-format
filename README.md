@@ -8,8 +8,143 @@ project files across many build-and-test cycles on a live venue rig, so it cover
 the schemas but the **silent failure modes** — the mistakes that make Lightkey crash on
 open, render an empty panel, or quietly ignore what you wrote.
 
+Install it into Claude and you can just ask for what you want — *"add a colour bank to my
+Lightkey project"* — and it works from hard-won knowledge instead of guessing at an
+undocumented binary format.
+
 > Unofficial and unaffiliated. Not endorsed by Lightkey or Monospace. It reads and writes
 > your project files, so **keep backups** and never overwrite your only copy.
+
+---
+
+# Install
+
+Two ways. Pick the one that matches how you use Claude.
+
+## If you use Claude Code (terminal)
+
+Run these two commands:
+
+```bash
+claude plugin marketplace add jimhoggey/lightkey-format
+```
+
+```bash
+claude plugin install lightkey-patcher@lightkey-format
+```
+
+Already inside Claude Code? Use `/plugin marketplace add jimhoggey/lightkey-format` and
+`/plugin install lightkey-patcher@lightkey-format` instead — same thing.
+
+Done. Later on, `/plugin marketplace update lightkey-format` updates it and
+`/plugin uninstall lightkey-patcher@lightkey-format` removes it.
+
+## If you use the Claude web or desktop app
+
+Upload a ZIP — no terminal needed.
+
+1. **Download the ZIP:**
+   [**lightkey-patcher-skill.zip**](https://github.com/jimhoggey/lightkey-format/releases/latest/download/lightkey-patcher-skill.zip)
+2. In Claude, go to **Settings → Capabilities → Skills**
+   (called **Customize → Skills** in some versions).
+3. Click **Add**, choose the ZIP you just downloaded, and upload it.
+4. It appears in your skills list with a toggle. Leave it switched on.
+
+You also need **code execution enabled** in settings, because the skill runs Python.
+Skills you upload are private to your account.
+
+> ⚠️ **Don't use the green "Code → Download ZIP" button on this repo.** That archive has
+> `SKILL.md` in the wrong place and Claude will reject it. Use the download link above —
+> it's the same content, packaged the way Claude needs.
+
+## After installing (either way)
+
+Nothing to configure. Claude uses it automatically as soon as you mention Lightkey, a
+`.lightkeyproj` file, or DMX lighting — you never have to invoke it by name.
+
+<details>
+<summary>Other ways to install</summary>
+
+**As a plain skill, without the plugin system:**
+
+```bash
+git clone https://github.com/jimhoggey/lightkey-format ~/.claude/lightkey-format
+mkdir -p ~/.claude/skills
+ln -s ~/.claude/lightkey-format/skills/lightkey-patcher ~/.claude/skills/lightkey-patcher
+```
+
+`SKILL.md` refers to `docs/…` and `lightkey/…` relative to the repo root, which the symlink
+preserves. For a project-scoped install use `.claude/skills/` inside the project instead.
+
+**With Cursor, Copilot or another assistant:** nothing here is Claude-specific. Point it at
+[`skills/lightkey-patcher/SKILL.md`](skills/lightkey-patcher/SKILL.md) as the entry point —
+it's plain markdown that links onward into `docs/`. Adding `SKILL.md` and
+`docs/pitfalls.md` to context is enough to avoid the expensive mistakes.
+
+**Just the Python, no AI:** see [Quick start](#quick-start-python-only) below.
+
+</details>
+
+---
+
+# Using it
+
+## In the Claude app (web or desktop)
+
+Claude can't reach your hard drive there, so the loop is **upload → ask → download**:
+
+1. **Find your project file** — a single `.lightkeyproj`, wherever you saved it (often
+   `~/Documents`).
+2. **Duplicate it first.** ⌘D in Finder. Work on the copy; never upload your only copy.
+3. **Attach the copy** to a new conversation (the 📎 button) and ask for what you want.
+4. **Download the file Claude gives back**, open it in Lightkey, and test it on the rig
+   before a service or show.
+
+## In Claude Code
+
+Just point it at the file — it can read and write your project directly, which makes it the
+better choice if you're iterating on a rig across many versions.
+
+## Things worth asking
+
+```
+What's in this Lightkey project? List my fixtures, cues and preset groups.
+
+My reds are coming out blue on the actual lights — what's wrong?
+
+Add a House Lights row with Off / 10 / 25 / 50 / 100%, where pressing one
+turns the previous one off.
+
+Build me a colour bank: 8 warm looks for worship, mirrored left-to-right,
+and make them all release each other.
+
+Add a section of moving-head positions — stage, ceiling, and a slow sweep.
+
+Check this file I generated: is anything broken, and does the panel have
+text hidden behind buttons?
+```
+
+A realistic first session:
+
+```
+you    [attaches BackupChurch.lightkeyproj]
+       What's in this project, and are any of my colours wrong?
+
+Claude runs tools/inspect_project.py  → 34 fixtures, 145 cues, 18 preset groups,
+                                        old fpStore schema, 9 mutex groups
+       runs tools/probe_colour.py     → blue-low/red-high confirmed, and flags
+                                        "Col: Fire Red" as storing blue
+       …explains what it found and offers to fix the mis-packed presets
+```
+
+**Two habits worth keeping.** Ask Claude to *inspect before it edits* — the tooling is built
+around reading your file first, and a change made without that is a guess. And **test on the
+rig**, not just in the app: a project can open perfectly and still have a button wired to
+nothing. `docs/pitfalls.md` exists because all of these failures are silent.
+
+---
+
+# Reference
 
 ## The headline finding: colours are packed B-G-R, not R-G-B
 
@@ -35,8 +170,9 @@ order. **Test with a saturated primary**, or just run the probe:
 python3 tools/probe_colour.py MyProject.lightkeyproj
 ```
 
-It decodes every named colour preset under both interpretations and tells you which one
-agrees with what the presets are called.
+It decodes every named colour preset under both interpretations, tells you which one agrees
+with what the presets are called, and flags any preset whose stored colour contradicts its
+own name — those were written by a patcher with the wrong packing.
 
 ## What's here
 
@@ -53,159 +189,12 @@ agrees with what the presets are called.
 | `tools/inspect_project.py` | CLI: dump fixtures, cues, panels, groups, schema flavour |
 | `tools/probe_colour.py` | CLI: prove the colour byte order against your own project |
 | `tools/extract_effects.py` | Pull native-effect blobs out of a reference project for cloning |
-| `examples/build_dimmer_panel.py` | End-to-end: build a working radio-group dimmer panel |
-| `skills/lightkey-patcher/SKILL.md` | Entry point when used as a Claude Code skill or plugin |
-| `.claude-plugin/` | Plugin + marketplace manifests (see [Use it with Claude](#use-it-with-claude)) |
 | `tools/build_skill_zip.py` | Repackage the repo as a claude.ai skill ZIP upload |
+| `examples/build_dimmer_panel.py` | End-to-end: build a working radio-group dimmer panel |
+| `skills/lightkey-patcher/SKILL.md` | Entry point when used as a Claude skill or plugin |
+| `.claude-plugin/` | Plugin + marketplace manifests |
 
-## Use it with Claude
-
-Installing this gives Claude the whole knowledge base — every schema, all 26 documented
-failure modes, the patterns, and the bundled Python — so you can say *"add a colour bank to
-my Lightkey project"* and it works from hard-won knowledge instead of guessing at an
-undocumented binary format.
-
-Pick whichever fits how you work:
-
-| You use… | Install | Best for |
-|---|---|---|
-| **Claude app / claude.ai** | [Upload the skill ZIP](#install-on-claudeai-upload-a-zip) — no terminal | Asking about a project, one-off edits |
-| **Claude Code** | [Plugin, two commands](#install-as-a-claude-code-plugin) | Iterating on a rig over many versions |
-| **Cursor / Copilot / other** | [Point it at `SKILL.md`](#use-it-with-other-ai-coding-tools) | Whatever you already use |
-
-### Install on claude.ai: upload a ZIP
-
-No terminal needed. claude.ai takes skills as a ZIP upload:
-
-1. **Download** [`lightkey-patcher-skill.zip`](https://github.com/jimhoggey/lightkey-format/releases/latest/download/lightkey-patcher-skill.zip)
-   (from [Releases](https://github.com/jimhoggey/lightkey-format/releases/latest) — see the
-   note below about why the green *Code → Download ZIP* button won't work).
-2. In Claude, open **Settings → Capabilities → Skills** (shown as **Customize → Skills** in
-   some versions) and click **Add** / **Create skill**.
-3. Upload the ZIP. It appears in your skills list with a toggle; leave it on.
-
-Claude then uses it automatically whenever you mention Lightkey or a `.lightkeyproj` file —
-you don't have to invoke it by name.
-
-**Requirements:** code execution must be enabled in your settings (the skill runs Python).
-Uploaded skills are private to your account.
-
-#### Using it
-
-Claude can't reach your disk on claude.ai, so the loop is **upload → ask → download**:
-
-1. **Find your project file.** Lightkey keeps it wherever you saved it — often
-   `~/Documents`. It's a single `.lightkeyproj` file.
-2. **Duplicate it first.** ⌘D in Finder. Work on the copy; never upload your only copy.
-3. **Attach the copy** to a new Claude conversation (the 📎 button) and ask for what you
-   want. The skill fires on its own.
-4. **Download the file Claude gives back**, then open it in Lightkey and test it on the rig
-   before a service or show.
-
-Things worth asking, roughly in order of how useful they are:
-
-```
-What's in this Lightkey project? List my fixtures, cues and preset groups.
-
-My reds are coming out blue on the actual lights — what's wrong?
-
-Add a House Lights row with Off / 10 / 25 / 50 / 100%, where pressing one
-turns the previous one off.
-
-Build me a colour bank: 8 warm looks for worship, mirrored left-to-right,
-and make them all release each other.
-
-Add a section of moving-head positions — stage, ceiling, and a slow sweep.
-
-Check this file I generated: is anything broken, and does the panel have
-text hidden behind buttons?
-```
-
-A realistic first session looks like this:
-
-```
-you    [attaches BackupChurch.lightkeyproj]
-       What's in this project, and are any of my colours wrong?
-
-Claude runs tools/inspect_project.py  → 34 fixtures, 145 cues, 18 preset groups,
-                                        old fpStore schema, 9 mutex groups
-       runs tools/probe_colour.py     → blue-low/red-high confirmed, and flags
-                                        "Col: Fire Red" as storing blue
-       …explains what it found and offers to fix the mis-packed presets
-```
-
-**Two habits worth keeping.** Ask Claude to *inspect before it edits* — the tooling is built
-around reading your file first, and a change made without that is a guess. And **test on the
-rig**, not just in the app: a project can open perfectly and still have a button wired to
-nothing. `docs/pitfalls.md` exists because all of these failures are silent.
-
-> **Why not the green "Code → Download ZIP" button?** That produces
-> `lightkey-format-main/` with `SKILL.md` buried at `skills/lightkey-patcher/SKILL.md`.
-> claude.ai requires `SKILL.md` at the top of the zipped folder and caps the skill
-> description at 200 characters, so that ZIP is rejected. The release asset is repackaged
-> for exactly this — same content, correct shape. Rebuild it yourself any time with:
->
-> ```bash
-> python3 tools/build_skill_zip.py     # -> dist/lightkey-patcher-skill.zip
-> ```
-
-### Install as a Claude Code plugin
-
-In Claude Code:
-
-```
-/plugin marketplace add jimhoggey/lightkey-format
-/plugin install lightkey-patcher@lightkey-format
-```
-
-Or from your shell:
-
-```bash
-claude plugin marketplace add jimhoggey/lightkey-format
-claude plugin install lightkey-patcher@lightkey-format
-```
-
-That's it — the skill activates automatically whenever you mention Lightkey, a
-`.lightkeyproj` file, or DMX lighting on macOS. It costs ~200 tokens of always-on context
-and loads the detailed references only when it actually fires.
-
-The installed plugin includes `docs/`, `lightkey/`, `tools/` and `examples/`, so Claude can
-read the reference material and run the bundled tools directly:
-
-```
-> my Lightkey reds are coming out blue
-      -> runs tools/probe_colour.py, finds the mis-packed presets, explains the byte order
-
-> build me a 5-step dimmer row for the front wash
-      -> reads docs/pitfalls.md, writes a builder, validates the output with lightkey/validate.py
-```
-
-Update later with `/plugin marketplace update lightkey-format`, and remove it with
-`/plugin uninstall lightkey-patcher@lightkey-format`.
-
-### Install as a plain skill (no plugin system)
-
-If you'd rather not use the plugin system, clone the repo and point a skill at it:
-
-```bash
-git clone https://github.com/jimhoggey/lightkey-format ~/.claude/lightkey-format
-mkdir -p ~/.claude/skills
-ln -s ~/.claude/lightkey-format/skills/lightkey-patcher ~/.claude/skills/lightkey-patcher
-```
-
-The skill's `SKILL.md` refers to `docs/…` and `lightkey/…` relative to the repo root, which
-the symlink preserves. For a project-scoped install, use `.claude/skills/` inside the
-project instead of `~/.claude/skills/`.
-
-### Use it with other AI coding tools
-
-There's nothing Claude-specific about the content. Point any assistant at
-[`skills/lightkey-patcher/SKILL.md`](skills/lightkey-patcher/SKILL.md) as its entry point —
-it's a plain markdown briefing that links onward into `docs/`. For Cursor, Copilot or
-similar, adding `SKILL.md` and `docs/pitfalls.md` to context is enough to avoid the
-expensive mistakes.
-
-## Quick start (no AI involved)
+## Quick start (Python only)
 
 ```bash
 git clone https://github.com/jimhoggey/lightkey-format
