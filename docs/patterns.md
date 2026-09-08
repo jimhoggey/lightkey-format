@@ -124,7 +124,7 @@ specs[FIX_UUID['F1']] = {'defined_features': ['Intensity'],
 # Moving heads off
 for k in MH_KEYS:
     specs[FIX_UUID[k]] = {'defined_features': ['Intensity', 'Shutter'],
-                           'segment': {'intensity': 0.0, 'shutterState': 2}}
+                           'segment': {'intensity': 0.0, 'shutterState': 1}}   # 1 = open; 2 is STROBE, not closed
 
 p = mk_preset(b, 'Scene: Pre-Service', build_fpstore(specs))
 c = mk_cue(b, 'Pre-Service', [p], fade_in=5.0, fade_out=3.0, priority=2)

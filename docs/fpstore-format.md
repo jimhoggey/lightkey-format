@@ -33,7 +33,7 @@ This is the schema the reference project uses. All current patterns in this docu
                     'xfadeToColor': 1.0,            # crossfade amount — always 1.0 for instant colour
                     'panAngle': -0.3,               # radians (moving heads only)
                     'tiltAngle': 1.2,
-                    'shutterState': 1,              # 1 = open, 2 = closed, other values = strobe
+                    'shutterState': 1,              # 1 = open, 2 = strobe (+ strobeSpeed) — see below
                     'strobeSpeed': ...,             # if shutter is strobing
                     'coolWhite': ...,               # additional RGB+CW/WW channels
                 },
@@ -50,7 +50,7 @@ This is the schema the reference project uses. All current patterns in this docu
 - **Each key in `umbrellaContainers` is a fixture UUID string** — specifically, the `UUID` of the `LXDMXFixture` object. Not the beam UUID — these are the same thing in current Lightkey files.
 - **Missing fixtures = "don't touch"**. If a preset omits a fixture, Lightkey leaves that fixture's state to whatever lower-priority cue is driving it (or the default). This is how LTP layering works.
 - **`definedFeatures`** is an allowlist of what the preset controls. Include ONLY the features you want to drive. A colour-only preset that still includes `'Intensity'` in `definedFeatures` will clobber intensity (even if you didn't set a value).
-- **`shutterState`**: 1 = open, 2 = closed. Observed values in the reference project; verify against your specific fixture profile before trusting.
+- **`shutterState`**: 1 = open, 2 = strobe (with `strobeSpeed` in Hz). "Closed" has never been observed as a distinct code — every off preset relies on `intensity: 0`. Decode the enum from the fixture profile's `LXShutterStrobeCapability.settings` (see Moving-head practicalities).
 
 ## Schema — newer (containers)
 
@@ -238,9 +238,17 @@ The returned bytes go into `$objects` as a plain bytes entry (no class wrapper),
 
 Learned on a rig of four 105 W beams (540° pan, 180° tilt):
 
-* **`shutterState`: 1 = open, 2 = closed.** An "off" position must set both
-  `'intensity': 0.0` **and** `'shutterState': 2` — intensity alone leaves a visible beam on
-  some profiles.
+* **`shutterState`: 1 = open, 2 = STROBE (paired with `strobeSpeed`, Hz).** There is no
+  proven "closed" code. Every "off" preset that used `shutterState: 2` only looked closed
+  because it also set `intensity: 0.0` — with intensity up, 2 strobes. For an off position
+  set `'intensity': 0.0` and **`'shutterState': 1`** (open) so a layered cue that raises
+  intensity never triggers a strobe by accident. To strobe deliberately:
+  `{'shutterState': 2, 'strobeSpeed': 9.0}` (2–16 Hz seen in real files).
+  **Decode the enum from the user's own profile before trusting this:** each
+  `LXShutterStrobeCapability.settings` entry is an `LXSetting` with a DMX range and
+  `params: {'mode': n}` — the narrow range (e.g. 0–6 or 240–255) is *open* (`mode 1`),
+  the wide range is the strobe sweep (`mode 2`). The number Lightkey writes into
+  `shutterState` is that `mode`.
 * **Mirror the pan, not the tilt.** House-right heads take `-pan` of house-left; tilt is
   shared. A single builder covering both sides removes a whole class of asymmetry bugs:
   ```python
