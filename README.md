@@ -182,7 +182,7 @@ own name — those were written by a patcher with the wrong packing.
 | `docs/class-schemas.md` | Field-by-field schemas for `LXCue`, `LXPreset`, `LXSequence`, `LXControlPanel`, `LXCpanButton`, `LXTextCanvasItem`, … |
 | `docs/fpstore-format.md` | The inner binary plist each preset carries: `umbrellaContainers`, colour packing, native effects, moving heads |
 | `docs/patterns.md` | 22 working recipes: radio groups, LTP layering, beat-synced sequences, mirrored gradients, collision-checked panel layout, output validation |
-| `docs/pitfalls.md` | 26 documented failure modes, each with symptom → cause → fix |
+| `docs/pitfalls.md` | 27 documented failure modes, each with symptom → cause → fix |
 | `lightkey/resolve.py` | Inspection library: `load()`, `find_instances()`, `resolve(uid, depth=N)` |
 | `lightkey/colour.py` | `pack_color` / `c8` / `unpack_rgb8`, uniform-brightness palettes |
 | `lightkey/validate.py` | `Validator` — semantic checks on a file you generated |

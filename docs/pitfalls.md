@@ -527,3 +527,28 @@ replacement cue also has a member.
 touches — for the party example: a warm-white preset in Stage Look, a movers-off preset in
 Movers, and a haze-off preset. Presets that live outside any mutex (haze here) can only be
 cancelled by an explicit counter-preset, never implicitly.
+
+## Bug 27: Python ints written where UIDs belong → panel decodes as EMPTY (and Lightkey overwrites it on save)
+
+**Symptom:** the file opens without a crash, but the Live View shows the "A fully customizable
+panel with buttons…" placeholder. If the user then saves, Lightkey writes the panel back with
+**zero items** and substitutes a default "Control Panel" — the on-disk file is now genuinely
+empty and the original output is gone.
+
+**Cause:** `plistlib` will happily serialise a Python `int` inside an `NS.objects` array. That is
+exactly what you get when you convert item references with `int(uid)` to use them as dict keys
+(`btn_by_name[name] = int(iu)`) and later append those ints back into the array. NSKeyedUnarchiver
+expects a UID (a CF `$uid` dict) for every array element; an integer makes the whole array fail to
+decode, silently.
+
+**Fix:** wrap on the way back — `new_items.append(UID(iu))` — and assert
+`all(isinstance(i, UID) for i in new_items)` before writing.
+
+**Detection:** `Validator.references_are_uids()` (now part of `structural_parity()`): every element
+of every `NS.objects` / `NS.keys` array and every reference-valued key (`cue`, `items`, `presets`,
+`childNodes`, `fpStore`, `contents`, `center`, `rect`, …) must be a `UID` instance. Note that
+`int(x)` works on both ints and UIDs, so a validator that resolves references with `int()` will
+**not** see this — it has to check the type.
+
+**Handoff rule:** tell the user *not to save* a file that shows the placeholder; ask for it back
+as-is instead. A re-saved file loses the evidence and the work.

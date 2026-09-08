@@ -140,6 +140,7 @@ class Validator:
         self.chk(not (set(cdefs(self.oB)) - set(cdefs(self.oA))), 'no new class defs')
         self.chk(int(self.sA['$top']['rootPresetGroup']) ==
                  int(self.sB['$top']['rootPresetGroup']), 'rootPresetGroup unchanged')
+        self.references_are_uids()
 
         def ks(o):
             return frozenset(k for k in o.keys() if k != '$class')
@@ -157,6 +158,36 @@ class Validator:
                and isinstance(self.oB[i].get('name'), UID)
                and not isinstance(self.oB[int(self.oB[i]['name'])], str)]
         self.chk(not bad, f'new names are raw strings ({len(bad)} bad)')
+
+    # keys whose values must be object references (UID) whenever present
+    REF_KEYS = ('cue', 'rect', 'name', 'items', 'presets', 'childNodes', 'fpStore', 'contents',
+                'center', 'unrotatedSize', 'colorName', 'UUID', 'trigger', 'action', 'params',
+                'orphanPresetsGroup', 'metaModifiers', 'metaModifierDefaults', 'activeSpeedModifiers',
+                'NSString', 'NSAttributes', 'fillColor', 'strokeColor', 'titleFont', 'livePanels',
+                'selectedLivePanel', 'rootPresetGroup')
+
+    def references_are_uids(self):
+        """Bug 27 — plistlib happily writes a Python int where NSKeyedArchiver expects a UID
+        (e.g. an index you converted with int() for a dict key and then appended back).
+        The file still parses; Lightkey silently decodes the array as empty, shows the
+        Live View placeholder, and if the user saves, REPLACES the panel with an empty
+        default one. Every NS.objects / NS.keys element and every reference-valued key
+        must be a UID instance."""
+        bad = []
+        for i, o in enumerate(self.oB):
+            if not isinstance(o, dict):
+                continue
+            for k in ('NS.objects', 'NS.keys'):
+                for j, x in enumerate(o.get(k, [])):
+                    if not isinstance(x, UID):
+                        bad.append((i, k, j, type(x).__name__))
+            for k in self.REF_KEYS:
+                if k in o and not isinstance(o[k], UID) and o[k] != '$null':
+                    bad.append((i, k, type(o[k]).__name__))
+        for k, x in self.sB['$top'].items():
+            if k in self.REF_KEYS and not isinstance(x, UID):
+                bad.append(('$top', k, type(x).__name__))
+        self.chk(not bad, f'every object reference is a UID instance ({len(bad)} bad) {bad[:4]}')
 
     def buttons_resolve(self):
         broken = []
