@@ -19,6 +19,12 @@ High-level recipes for common Lightkey-patching tasks. Every pattern here has be
 20. [Composite "one-press" event cues](#20-composite-one-press-event-cues)
 21. [Validate the OUTPUT file, not your intentions](#21-validate-the-output-file-not-your-intentions)
 22. [Animated colour flows as sequences](#22-animated-colour-flows-as-sequences)
+23. [One-shot cues (flash, then release themselves)](#23-one-shot-cues-flash-then-release-themselves)
+24. [A timeline-driven show block (MIDI notes in, no operator)](#24-a-timeline-driven-show-block-midi-notes-in-no-operator)
+25. [Twin flows: an animated version of a static look, seamlessly](#25-twin-flows-an-animated-version-of-a-static-look-seamlessly)
+26. [Carving into a layout the user likes](#26-carving-into-a-layout-the-user-likes)
+27. [Strobes and hard-cut chases](#27-strobes-and-hard-cut-chases)
+28. [Moving-head position vocabulary](#28-moving-head-position-vocabulary)
 
 ---
 
@@ -592,7 +598,7 @@ The shape of the whole build:
 ```python
 archive = plistlib.load(open(SRC, 'rb'))
 top, objs = archive['$top'], archive['$objects']
-b = Builder(archive)
+b = Builder(archive)          # your own builder; examples/build_dimmer_panel.py has a working one
 
 stage_look = find_group('v18 Stage Look')     # by NAME — UIDs shift (Bug 23)
 movers_grp = find_group('v18 Movers')
@@ -767,7 +773,7 @@ the *semantics* you promised:
 
 Decoding colours back out (`unpack_rgb8` → HSV → hue bucket) is the only way to catch a
 byte-order regression, and it is cheap. A validator in this shape caught real problems in
-every version; 64 assertions is not excessive for a file a volunteer will run a service on.
+every version; 60+ assertions is not excessive for a file a volunteer will run a service on.
 
 ## 22. Animated colour flows as sequences
 

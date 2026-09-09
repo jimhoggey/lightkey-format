@@ -188,7 +188,7 @@ own name — those were written by a patcher with the wrong packing.
 | `docs/fpstore-format.md` | The inner binary plist each preset carries: `umbrellaContainers`, colour packing, native effects, moving heads |
 | `docs/patterns.md` | 28 working recipes: radio groups, LTP layering, beat-synced sequences, mirrored gradients, collision-checked layout, one-shot cues, MIDI/timeline show blocks, twin flows, strobes, moving-head vocabulary |
 | `docs/pitfalls.md` | 29 documented failure modes, each with symptom → cause → fix |
-| `lightkey/resolve.py` | Inspection library: `load()`, `find_instances()`, `resolve(uid, depth=N)` |
+| `lightkey/resolve.py` | Inspection library: `load()`, `find_instances()`, `resolve(objs, uid, depth=N)` |
 | `lightkey/colour.py` | `pack_color` / `c8` / `unpack_rgb8`, uniform-brightness palettes |
 | `lightkey/validate.py` | `Validator` — semantic checks on a file you generated |
 | `tools/inspect_project.py` | CLI: dump fixtures, cues, panels, groups, schema flavour, MIDI/key bindings (`--midi`, dead ones flagged) |
@@ -242,7 +242,7 @@ from lightkey.validate import Validator
 v = Validator('source.lightkeyproj', 'output.lightkeyproj')
 v.structural_parity()      # class defs, key sets, raw-string names, root untouched
 v.buttons_resolve()        # every button -> cue -> preset -> fpStore
-v.preserved_buttons()      # source buttons kept, bindings unchanged
+v.preserved_buttons()      # source buttons kept, cue/behavior/tint unchanged
 v.no_overlap(ignore_preexisting=True)   # no NEW label/button collisions
 v.mutex_intact(['Colour Bank'])
 v.one_shot('Hit All', max_hold=1.0)      # finite hold, releases itself

@@ -9,7 +9,7 @@ Implements the patterns documented in docs/patterns.md §10–§13:
 
 Copy this file into your working directory alongside resolve.py, then import:
 
-    from colour_helpers import (
+    from lightkey.colour import (
         pack_color, make_colour_var, fp_palette_uniform_brightness,
         fp_step, COLOUR_BANK,
     )
@@ -216,7 +216,9 @@ def fp_dim(fixture_keys, intensity, fix_uuid, moving_heads_keys=()):
         seg = {'intensity': float(intensity)}
         features = ['Intensity']
         if k in mh_set:
-            seg['shutterState'] = 1 if intensity > 0 else 2
+            # 1 = open. NEVER 2 for an off state: 2 is STROBE, and a later layered
+            # cue that raises intensity would inherit it (docs/pitfalls.md Bug 27 era).
+            seg['shutterState'] = 1
             features = ['Intensity', 'Shutter']
         umbrella[fix_uuid[k]] = {
             'definedFeatures': features,

@@ -30,7 +30,7 @@ A fixture-state snapshot. The heart of every cue.
 
 ```python
 {
-    'name': UID(),           # -> NSMutableString
+    'name': UID(),           # -> RAW plist string, NOT NSMutableString (see pitfalls.md Bug 14)
     'UUID': UID(),           # -> NSUUID
     'active': False,         # bool — always False at build time
     'childNodes': UID(),     # -> NSArray (usually empty shared singleton)
@@ -62,7 +62,7 @@ A container grouping preset(s) with optional mutual exclusion (radio behaviour).
 
 ```python
 {
-    'name': UID(),           # -> NSMutableString (can be empty)
+    'name': UID(),           # -> RAW plist string, NOT NSMutableString (see pitfalls.md Bug 14) (can be empty)
     'UUID': UID(),           # -> NSUUID
     'childNodes': UID(),     # -> NSArray of LXPreset / LXPresetGroup / LXSequence UIDs
     'presetsAreMutuallyExclusive': True or False,  # bool — radio behaviour
@@ -82,7 +82,7 @@ Top-level preset tree root, AND the "orphanPresetsGroup" required by every cue.
 
 ```python
 {
-    'name': UID(),           # -> NSMutableString (e.g. 'Cue Orphan Presets Group')
+    'name': UID(),           # -> RAW plist string, NOT NSMutableString (see pitfalls.md Bug 14) (e.g. 'Cue Orphan Presets Group')
     'UUID': UID(),           # -> NSUUID
     'childNodes': UID(),     # -> NSArray (usually the empty singleton)
     'presetsAreMutuallyExclusive': False,
@@ -102,7 +102,7 @@ The primary playable unit — fires one or more presets/sequences with fade-in/o
 
 ```python
 {
-    'name': UID(),               # -> NSMutableString
+    'name': UID(),               # -> RAW plist string, NOT NSMutableString (see pitfalls.md Bug 14)
     'UUID': UID(),               # -> NSUUID
     'active': False,
     'activateAtStartup': False,
@@ -153,7 +153,7 @@ A beat-synced or time-based cycle through a list of preset-state snapshots.
 
 ```python
 {
-    'name': UID(),                    # -> NSMutableString
+    'name': UID(),                    # -> RAW plist string, NOT NSMutableString (see pitfalls.md Bug 14)
     'UUID': UID(),                    # -> NSUUID
     'active': False,
     'childNodes': UID(),              # -> NSArray of sequence-child LXPreset UIDs (with 'duration' field)
@@ -210,7 +210,7 @@ The container for the on-screen button grid.
 
 ```python
 {
-    'name': UID(),       # -> NSMutableString
+    'name': UID(),       # -> RAW plist string, NOT NSMutableString (see pitfalls.md Bug 14)
     'UUID': UID(),       # -> NSUUID
     'items': UID(),      # -> NSArray of LXCpanButton + LXTextCanvasItem + LXCpanFrame UIDs
     'fadeDuration': 0.3, # default fade when no cue specifies one
@@ -266,7 +266,7 @@ If the source file doesn't have this class defined, you must add both `LXCpanFra
 
 ```python
 {
-    'name': UID(),                    # -> NSMutableString (appears as frame title)
+    'name': UID(),                    # -> RAW plist string, NOT NSMutableString (see pitfalls.md Bug 14) (appears as frame title)
     'UUID': UID(),                    # -> NSUUID
     'rect': UID(),                    # -> RAW STRING '{{x, y}, {w, h}}'
     'members': UID(),                 # -> NSSet of LXCpanButton UIDs inside the frame

@@ -47,7 +47,7 @@ NSKeyedArchiver deduplicates content. In every Lightkey archive you will find:
 - One **shared empty `NSDictionary`** (e.g. UID 658 in the reference project) referenced as `metaModifiers`, `metaModifierDefaults`, `orphanPresetsGroup`'s empty slots. Same rule: reuse it.
 - Sometimes a **shared `NSColor` white** (e.g. UID 212) used as fill/stroke for text items.
 
-My `Builder.ns_array([])` and `Builder.ns_dict([])` helpers detect these on init and return the existing UID when asked for an empty collection.
+A builder's empty-array / empty-dict helpers (see `examples/build_dimmer_panel.py`) detect these on init and return the existing UID when asked for an empty collection.
 
 ## $top — named roots
 

@@ -117,7 +117,7 @@ def main():
             f.write(skill_md)
         for d in PAYLOAD_DIRS:
             shutil.copytree(os.path.join(REPO, d), os.path.join(root, d),
-                            ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
+                            ignore=shutil.ignore_patterns('__pycache__', '*.pyc', '.DS_Store'))
         for f in PAYLOAD_FILES:
             shutil.copy2(os.path.join(REPO, f), root)
 

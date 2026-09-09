@@ -95,7 +95,7 @@ Ask before building. The space of edits is huge. Typical axes:
 - **Layer composition**: colour bank + independent effects pane? Sealed song sequences? Both?
 - **Live workflow**: which cues must be mutually exclusive? Which compose freely?
 
-The best tool for eliciting these is `ask_user_input_v0` if you have it. Present 2-4 concrete options per question — avoid open-ended asking.
+Use whatever structured question tool your harness provides, if any. Present 2-4 concrete options per question — avoid open-ended asking.
 
 For a redesign of an existing panel, the question that matters most is **how much of their
 current arrangement to keep** — offer "clean re-flow / keep my arrangement / full redesign"
@@ -182,11 +182,11 @@ These were learned the hard way over many iteration cycles. Violate any of them 
    - `top.rootPresetGroup` is the SAME UID as in the source (it must not be replaced).
    - Sample buttons → cues → presets → fpStores resolve cleanly.
 
-2. **Semantically validate — assert every claim you intend to make to the user.** Structural parity says the file will open; it says nothing about whether it is usable. Re-parse the output and check geometry (zero overlap between button rects and label boxes), preservation (every source button still present with an unchanged cue), rockers (mutex flags still set, old group children still members), and colour (decode packed values back to RGB, bucket the hue, assert the family). `docs/patterns.md` §21 has the claim→assertion table. A 60-assertion validator is proportionate for a file someone runs a live service on.
+2. **Semantically validate — assert every claim you intend to make to the user.** Structural parity says the file will open; it says nothing about whether it is usable. Re-parse the output and check geometry (zero overlap between button rects and label boxes), preservation (every source button still present with an unchanged cue), rockers (mutex flags still set, old group children still members), and colour (decode packed values back to RGB, bucket the hue, assert the family). `docs/patterns.md` §21 has the claim→assertion table. A 60+ assertion validator is proportionate for a file someone runs a live service on.
 
 3. **Never promise it will open in Lightkey.** Structural validation catches some bugs but not all. Frame output as "should work, please test and send the crash log if it doesn't."
 
-3. **Ask for the crash log** the first time something breaks. `~/Library/Logs/DiagnosticReports/Lightkey-*.ips`. Thread 0 stack depth tells you whether it's an early decode failure (object shape wrong) or a late semantic failure (runtime logic).
+4. **Ask for the crash log** the first time something breaks. `~/Library/Logs/DiagnosticReports/Lightkey-*.ips`. Thread 0 stack depth tells you whether it's an early decode failure (object shape wrong) or a late semantic failure (runtime logic).
 
 Read `docs/pitfalls.md` before writing the first line of code — it's where the silent-failure bugs are documented.
 
@@ -248,7 +248,7 @@ For anything beyond inspection, read `docs/pitfalls.md` (the silent failures) th
 
 ```python
 top, objs = archive['$top'], archive['$objects']
-b = Builder(archive)
+b = Builder(archive)          # your own builder; examples/build_dimmer_panel.py has a working one
 
 def gs(u):                                   # resolve a name reference to str
     x = objs[int(u)] if isinstance(u, UID) else None
@@ -286,7 +286,7 @@ panel['items'] = b.ns_array(items)           # reused button UIDs + new label/bu
 
 ## Output discipline
 
-- Always copy final files to a writable user-accessible location and present with `present_files` if available.
+- Always write final files to a location the user can reach, and surface them however your harness delivers files.
 - Name outputs with version suffixes (`filename_v2.lightkeyproj`, `filename_v3.lightkeyproj`) — the user will iterate; named versions make rollback easy.
 - Never overwrite the user's original input file.
 - **Leave the previous panel in `livePanels` as a backup tab** and point `selectedLivePanel` at the new one. Rolling back then costs the user one click instead of a file swap.

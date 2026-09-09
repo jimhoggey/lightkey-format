@@ -341,7 +341,7 @@ Then put any "Effects Pane" intensity-modulation cues at a HIGHER priority so th
 
 **Cause:** Spreading one global gradient across 22 stage fixtures means the 6 top-bar fixtures only cover indices 0–5 of 22 — the first ~25% of the palette. All six land in the "pale sky" stop of the palette.
 
-**Fix:** Each zone gets its OWN full sweep of the palette. Top bar of 6 fixtures walks the full palette 0→1; side vertical of 4 fixtures walks the full palette 0→1 too. See `patterns.md` §12.
+**Fix:** Each zone gets its OWN full sweep of the palette. Top bar of 6 fixtures walks the full palette 0→1; side vertical of 4 fixtures walks the full palette 0→1 too. See `patterns.md` §11.
 
 ### Bug 20: Effects Pane Intensity priority unintentionally clobbers sequence-step intensity
 
@@ -534,7 +534,7 @@ when one member is displaced; a cue with two members in the *same* group can dis
 Design every cue as **one member per mutex group** and build combined looks as a single
 sequence/preset that carries all the values (`patterns.md` §24).
 
-## Bug 27: Python ints written where UIDs belong → panel decodes as EMPTY (and Lightkey overwrites it on save)
+### Bug 27: Python ints written where UIDs belong → panel decodes as EMPTY (and Lightkey overwrites it on save)
 
 **Symptom:** the file opens without a crash, but the Live View shows the "A fully customizable
 panel with buttons…" placeholder. If the user then saves, Lightkey writes the panel back with
@@ -559,7 +559,7 @@ of every `NS.objects` / `NS.keys` array and every reference-valued key (`cue`, `
 **Handoff rule:** tell the user *not to save* a file that shows the placeholder; ask for it back
 as-is instead. A re-saved file loses the evidence and the work.
 
-## Bug 28: Rebuilding cues "fresh" silently kills the user's MIDI and keyboard bindings
+### Bug 28: Rebuilding cues "fresh" silently kills the user's MIDI and keyboard bindings
 
 **Symptom:** the file opens, the panel works, but the MIDI notes the user mapped weeks ago do
 nothing. Nothing crashes. In one project 10 of 15 bindings were dead and nobody had noticed.
@@ -575,7 +575,7 @@ removed) or re-point the binding's `cueUUID`.
 **Detection:** `tools/inspect_project.py --midi` lists every binding with the cue it resolves to,
 and marks the dead ones.
 
-## Bug 29: Appending to a group whose `childNodes` is the shared empty-array singleton
+### Bug 29: Appending to a group whose `childNodes` is the shared empty-array singleton
 
 **Symptom:** creative — every empty array in the file suddenly has children: cues with empty
 preset lists gain presets, orphan groups gain members, panels gain items. Lightkey may open it,
