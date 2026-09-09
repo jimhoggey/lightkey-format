@@ -191,6 +191,50 @@ def show_panel_detail(data, objs):
             print(f'  TEXT {str(txt)[:30]:<31} centre={centre} size={size} font={fs}')
 
 
+def show_bindings(data, objs):
+    """MIDI / key bindings and the cue each resolves to — dead references are marked.
+    Bindings point at cues by UUID (Bug 28): a rebuilt cue silently orphans its note."""
+    import uuid as _uuid
+    top = data['$top']
+    cues = {}
+    for u in find_instances(objs, 'LXCue'):
+        o = objs[u]
+        ub = objs[int(o['UUID'])].get('NS.uuidbytes') if isinstance(o.get('UUID'), UID) else None
+        if isinstance(ub, bytes):
+            cues[str(_uuid.UUID(bytes=ub)).upper()] = getstr(objs, o.get('name'))
+    for cat_key, label in (('MIDIBindingsCategory', 'MIDI'), ('keyBindingsCategory', 'KEYBOARD')):
+        cat = objs[int(top[cat_key])] if isinstance(top.get(cat_key), UID) else None
+        if not cat:
+            continue
+        section(f'{label} BINDINGS')
+        total = dead = 0
+        for cfg_u in objs[int(cat['configurations'])]['NS.objects']:
+            cfg = objs[int(cfg_u)]
+            for b_u in objs[int(cfg['bindings'])]['NS.objects']:
+                bnd = objs[int(b_u)]
+                tr = objs[int(bnd['trigger'])]
+                act = objs[int(objs[int(bnd['action'])]['params'])]
+                params = {getstr(objs, k): objs[int(v)] for k, v in zip(act['NS.keys'], act['NS.objects'])}
+                cu = params.get('cueUUID')
+                cuid = str(_uuid.UUID(bytes=cu['NS.uuidbytes'])).upper() if isinstance(cu, dict) else None
+                name = cues.get(cuid)
+                total += 1
+                dead += name is None
+                if 'note' in tr:
+                    trig = (f"ch={tr.get('channel')} note={tr.get('note'):3d} cmd={tr.get('commandType')} "
+                            f"port={getstr(objs, tr.get('endpointName'))!r}")
+                else:
+                    sc = objs[int(tr['shortcut'])] if isinstance(tr.get('shortcut'), UID) else {}
+                    keys = {getstr(objs, k): objs[int(v)] for k, v in zip(sc.get('NS.keys', []), sc.get('NS.objects', []))} if isinstance(sc, dict) else {}
+                    trig = f"key {getstr(objs, keys.get('characters'))!r} mods={keys.get('modifierFlags')}"
+                beh = {0: 'toggle', 1: 'while held'}.get(params.get('activationBehavior'), str(params.get('activationBehavior')))
+                atype = params.get('type')
+                atype = atype if isinstance(atype, str) else getstr(objs, atype)
+                print(f"  {trig:52s} {str(atype):10s} {beh:10s} -> "
+                      f"{(repr(name) if name else 'DEAD (cue UUID not in file)')}")
+        print(f"  {total} bindings, {dead} dead")
+
+
 def show_classes(objs):
     section('CLASS INVENTORY ($classname definitions)')
     defs = Counter(o['$classname'] for o in objs
@@ -207,6 +251,7 @@ def main():
     ap.add_argument('--fixtures', action='store_true')
     ap.add_argument('--panel', action='store_true', help='detail the selected panel')
     ap.add_argument('--classes', action='store_true')
+    ap.add_argument('--midi', action='store_true', help='MIDI/key bindings and the cue each fires (dead ones flagged)')
     ap.add_argument('--all', action='store_true', help='everything, no cue limit')
     args = ap.parse_args()
 
@@ -220,6 +265,8 @@ def main():
         show_fixtures(objs)
     if args.panel or args.all:
         show_panel_detail(data, objs)
+    if args.midi or args.all:
+        show_bindings(data, objs)
     if args.classes or args.all:
         show_classes(objs)
     print()

@@ -115,10 +115,15 @@ My reds are coming out blue on the actual lights — what's wrong?
 Add a House Lights row with Off / 10 / 25 / 50 / 100%, where pressing one
 turns the previous one off.
 
-Build me a colour bank: 8 warm looks for worship, mirrored left-to-right,
+Build me a colour bank: 8 warm ambient looks, mirrored left-to-right,
 and make them all release each other.
 
 Add a section of moving-head positions — stage, ceiling, and a slow sweep.
+
+Build me a MIDI-driven cue bank for a video opener: one-shot hits per zone,
+a few full-stage states, strobes, and an EXIT that fades back to the service look.
+
+Make the animated flow exactly match the static look so I can switch between them.
 
 Check this file I generated: is anything broken, and does the panel have
 text hidden behind buttons?
@@ -127,13 +132,13 @@ text hidden behind buttons?
 A realistic first session:
 
 ```
-you    [attaches BackupChurch.lightkeyproj]
+you    [attaches MyVenue.lightkeyproj]
        What's in this project, and are any of my colours wrong?
 
-Claude runs tools/inspect_project.py  → 34 fixtures, 145 cues, 18 preset groups,
-                                        old fpStore schema, 9 mutex groups
+Claude runs tools/inspect_project.py  → 32 fixtures, 140 cues, 16 preset groups,
+                                        old fpStore schema, 8 mutex groups
        runs tools/probe_colour.py     → blue-low/red-high confirmed, and flags
-                                        "Col: Fire Red" as storing blue
+                                        "Fire Red" as storing blue
        …explains what it found and offers to fix the mis-packed presets
 ```
 
@@ -179,14 +184,14 @@ own name — those were written by a patcher with the wrong packing.
 | Path | What it is |
 |---|---|
 | `docs/archive-format.md` | NSKeyedArchiver basics: `$objects`, `$top`, UID references |
-| `docs/class-schemas.md` | Field-by-field schemas for `LXCue`, `LXPreset`, `LXSequence`, `LXControlPanel`, `LXCpanButton`, `LXTextCanvasItem`, … |
+| `docs/class-schemas.md` | Field-by-field schemas for `LXCue`, `LXPreset`, `LXSequence`, `LXControlPanel`, `LXCpanButton`, `LXTextCanvasItem`, MIDI/key bindings, fixture profiles & capabilities |
 | `docs/fpstore-format.md` | The inner binary plist each preset carries: `umbrellaContainers`, colour packing, native effects, moving heads |
-| `docs/patterns.md` | 22 working recipes: radio groups, LTP layering, beat-synced sequences, mirrored gradients, collision-checked panel layout, output validation |
-| `docs/pitfalls.md` | 27 documented failure modes, each with symptom → cause → fix |
+| `docs/patterns.md` | 28 working recipes: radio groups, LTP layering, beat-synced sequences, mirrored gradients, collision-checked layout, one-shot cues, MIDI/timeline show blocks, twin flows, strobes, moving-head vocabulary |
+| `docs/pitfalls.md` | 29 documented failure modes, each with symptom → cause → fix |
 | `lightkey/resolve.py` | Inspection library: `load()`, `find_instances()`, `resolve(uid, depth=N)` |
 | `lightkey/colour.py` | `pack_color` / `c8` / `unpack_rgb8`, uniform-brightness palettes |
 | `lightkey/validate.py` | `Validator` — semantic checks on a file you generated |
-| `tools/inspect_project.py` | CLI: dump fixtures, cues, panels, groups, schema flavour |
+| `tools/inspect_project.py` | CLI: dump fixtures, cues, panels, groups, schema flavour, MIDI/key bindings (`--midi`, dead ones flagged) |
 | `tools/probe_colour.py` | CLI: prove the colour byte order against your own project |
 | `tools/extract_effects.py` | Pull native-effect blobs out of a reference project for cloning |
 | `tools/build_skill_zip.py` | Repackage the repo as a claude.ai skill ZIP upload |
@@ -225,6 +230,9 @@ message. The short version:
 4. Reuse existing class definitions; don't mint duplicates.
 5. Modify the user's objects in place where you can. Rebuilding a panel from scratch drops
    bindings and destroys hand-made edits.
+6. Every reference you write is a `plistlib.UID` instance — a bare int parses fine and
+   silently empties the panel (and Lightkey re-saves it empty).
+7. One preset/sequence per mutex group per cue; give a show block an EXIT cue.
 
 Then validate what you wrote, not what you meant:
 
@@ -235,8 +243,9 @@ v = Validator('source.lightkeyproj', 'output.lightkeyproj')
 v.structural_parity()      # class defs, key sets, raw-string names, root untouched
 v.buttons_resolve()        # every button -> cue -> preset -> fpStore
 v.preserved_buttons()      # source buttons kept, bindings unchanged
-v.no_overlap()             # no label rendering underneath a button
+v.no_overlap(ignore_preexisting=True)   # no NEW label/button collisions
 v.mutex_intact(['Colour Bank'])
+v.one_shot('Hit All', max_hold=1.0)      # finite hold, releases itself
 v.hues_within('Fire', {'red', 'orange'})   # catches a byte-order regression
 v.report()
 ```

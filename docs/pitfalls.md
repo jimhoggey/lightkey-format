@@ -345,7 +345,7 @@ Then put any "Effects Pane" intensity-modulation cues at a HIGHER priority so th
 
 ### Bug 20: Effects Pane Intensity priority unintentionally clobbers sequence-step intensity
 
-**Symptom:** Built an `ITG · Chorus` sequence where PN1 and PN2 alternate-flash on the beat. Operator has Effects Pane "Pulse Slow" active. Sequence runs but PN1/PN2 don't alternate — every fixture pulses uniformly.
+**Symptom:** Built an `SongA · Chorus` sequence where G1 and G2 alternate-flash on the beat. Operator has Effects Pane "Pulse Slow" active. Sequence runs but G1/G2 don't alternate — every fixture pulses uniformly.
 
 **Cause:** Sequence-step preset declared `Intensity` at priority 6; Effects Pane "Pulse Slow" declared `Intensity` at priority 7. Higher priority wins LTP, so Pulse Slow overrode the per-fixture intensity intent of the sequence.
 
@@ -366,7 +366,7 @@ users, and it breaks several assumptions the earlier bugs didn't cover.
 
 **Symptom:** You build a new panel that reuses the source file's cues (`'cue': UID(existing)`).
 The file opens, the panel renders, the buttons look right — but pressing several sections
-does nothing. The user reports "the front wash buttons weren't linked to the presets, I had
+does nothing. The user reports "the face wash buttons weren't linked to the presets, I had
 to drag them in manually."
 
 **Cause:** Not fully understood (Lightkey resolves button→cue bindings through some
@@ -528,6 +528,12 @@ touches — for the party example: a warm-white preset in Stage Look, a movers-o
 Movers, and a haze-off preset. Presets that live outside any mutex (haze here) can only be
 cancelled by an explicit counter-preset, never implicitly.
 
+**Underlying rule (confirmed again while building a MIDI show block):** mutual exclusion is
+evaluated per *preset member*, not per cue. A cue whose members span two groups stays half-active
+when one member is displaced; a cue with two members in the *same* group can displace itself.
+Design every cue as **one member per mutex group** and build combined looks as a single
+sequence/preset that carries all the values (`patterns.md` §24).
+
 ## Bug 27: Python ints written where UIDs belong → panel decodes as EMPTY (and Lightkey overwrites it on save)
 
 **Symptom:** the file opens without a crash, but the Live View shows the "A fully customizable
@@ -552,3 +558,35 @@ of every `NS.objects` / `NS.keys` array and every reference-valued key (`cue`, `
 
 **Handoff rule:** tell the user *not to save* a file that shows the placeholder; ask for it back
 as-is instead. A re-saved file loses the evidence and the work.
+
+## Bug 28: Rebuilding cues "fresh" silently kills the user's MIDI and keyboard bindings
+
+**Symptom:** the file opens, the panel works, but the MIDI notes the user mapped weeks ago do
+nothing. Nothing crashes. In one project 10 of 15 bindings were dead and nobody had noticed.
+
+**Cause:** bindings (`LXBinding → LXAction.params.cueUUID`) reference cues **by UUID**, not by
+object. Every "clone everything fresh" rebuild mints new cues with new UUIDs; the bindings keep
+pointing at the old ones, which are gone.
+
+**Fix:** modify cues in place (Bug 22's rule applies to cues, not just buttons). If a cue must be
+replaced, either copy the old cue's `UUID` object onto the replacement (only if the old cue is
+removed) or re-point the binding's `cueUUID`.
+
+**Detection:** `tools/inspect_project.py --midi` lists every binding with the cue it resolves to,
+and marks the dead ones.
+
+## Bug 29: Appending to a group whose `childNodes` is the shared empty-array singleton
+
+**Symptom:** creative — every empty array in the file suddenly has children: cues with empty
+preset lists gain presets, orphan groups gain members, panels gain items. Lightkey may open it,
+may crash, may show duplicated behaviour.
+
+**Cause:** the source file stores one empty `NSArray` and references it from every empty
+collection (Rule 5 tells you to reuse it). If you mint a group with `childNodes` pointing at that
+singleton and then `group_append()` into it by mutating `NS.objects` in place, you have mutated
+every empty array in the archive.
+
+**Fix:** build the member list first and mint the group last with a fresh array; or, when you
+must append to an existing group, replace the reference (`group['childNodes'] = new_array_uid`)
+instead of mutating the array object. Assert `int(group['childNodes']) != EMPTY_ARRAY_UID` before
+any in-place append.

@@ -100,7 +100,7 @@ Stage and venue lighting almost always uses latching. Momentary is useful for th
 
 ## 4. Scene cues
 
-Problem: the user wants one button that sets multiple sections at once (e.g. "Pre-Service" lights up front wash, sets top colour blue, and turns on haze).
+Problem: the user wants one button that sets multiple sections at once (e.g. "Pre-Service" lights up face wash, sets top colour blue, and turns on haze).
 
 Solution: **one cue, one preset, spec covers ALL fixtures.**
 
@@ -119,7 +119,7 @@ for k in TOP_COLOUR_KEYS:
                                'intensity': 0.3,
                            }}
 # Haze on
-specs[FIX_UUID['F1']] = {'defined_features': ['Intensity'],
+specs[FIX_UUID['HAZE1']] = {'defined_features': ['Intensity'],
                           'segment': {'intensity': 0.6}}
 # Moving heads off
 for k in MH_KEYS:
@@ -184,10 +184,10 @@ hold + crossfade = cycle / N
 
 ### Common tempos
 
-At **127 BPM** (PRAISE, Elevation Worship):
+At **127 BPM** (an up-tempo song):
 - 1 beat = 0.472s, 8th = 0.236s, 16th = 0.118s, 1 bar = 1.890s
 
-At **128 BPM** (TGIF, Elevation Rhythm):
+At **128 BPM** (a typical up-tempo track):
 - 1 beat = 0.469s, 8th = 0.234s, 16th = 0.117s, 1 bar = 1.875s
 
 At **120 BPM** (many hymns):
@@ -220,7 +220,7 @@ frame_w = (x - LEFT_MARGIN) + 8
 frame_h = BTN_H + 22 + 6  # buttons + title area + padding
 
 # Create the frame
-frame_uid = mk_cpan_frame(b, 'PRAISE — 127 BPM',
+frame_uid = mk_cpan_frame(b, 'Song B — 127 BPM',
                           frame_x, frame_y, frame_w, frame_h,
                           button_uids,
                           show_speed_slider=True,
@@ -328,11 +328,11 @@ Solution: put EVERY colour-driving cue (palettes, sequences, FX) into ONE `LXPre
 
 ```python
 cb_uids   = build_colour_bank(b)         # 16 palettes
-itg_uids  = build_i_thank_god(b)         # 4 song sequences
+song_uids  = build_song_a(b)         # 4 song sequences
 fx_uids   = build_colour_bearing_fx(b)   # 3 cloned scenes
 
 mk_preset_group(b, 'Stage Look',
-                cb_uids + itg_uids + fx_uids,
+                cb_uids + song_uids + fx_uids,
                 mutually_exclusive=True)
 ```
 
@@ -397,22 +397,22 @@ def fp_colour_palette(palette_name):
                           fmt=plistlib.FMT_BINARY)
 ```
 
-Top bar P8–P13 visits Sky Blue's full range: pale sky → cerulean → azure → deep blue → midnight. Backwards lights independently walk the same palette across their 5 fixtures. Every zone reads as "colour-walked" not "monochrome chunk".
+Top bar T1–T6 visits Sky Blue's full range: pale sky → cerulean → azure → deep blue → midnight. Backwards lights independently walk the same palette across their 5 fixtures. Every zone reads as "colour-walked" not "monochrome chunk".
 
 ## 12. Priority stack for layered composition
 
-Problem: you want Colour Bank + Effects Pane to compose freely; you want song sequences to "seal" their look (Effects can't clobber them); you want MC/Preach scenes to override everything below.
+Problem: you want Colour Bank + Effects Pane to compose freely; you want song sequences to "seal" their look (Effects can't clobber them); you want MC/Speaker scenes to override everything below.
 
 Solution: assign per-LAYER priorities. LTP is per-feature, so layers that drive different features (Color vs Intensity) compose regardless. Layers driving the SAME feature stack by priority — higher wins.
 
 ```
-Front Wash / Preach Corner   3     # independent fixture zone (no conflict)
+Face wash / speaker spot   3     # independent fixture zone (no conflict)
 House                        4     # independent zone
 Haze                         5     # independent zone
 Stage Look (Colour Bank)     6     # base — Color + Intensity at 1.0
 Effects Pane                 7     # Intensity only — wins over Stage Look's Intensity
-Song sequences (e.g. ITG)    8     # Color + Intensity per-fixture — wins over Effects Pane
-MC / Preach scenes           9     # cloned, both features — overrides everything below
+Song sequences (e.g. SongA)    8     # Color + Intensity per-fixture — wins over Effects Pane
+Announcement scenes           9     # cloned, both features — overrides everything below
 Master Blackout              11    # full takeover when triggered
 Punch FX (momentary)         12    # press-and-hold flashes that punch through
 ```
@@ -422,7 +422,7 @@ Why this works:
 - Colour Bank press: `Color` + `Intensity=1.0` at p6. Both features visible.
 - Add Effects Pane press: `Intensity` (with effect) at p7. Wins LTP on Intensity. Colour Bank's `Color` is uncontested and still visible.
 - Add song sequence press: `Color` + per-fixture `Intensity` at p8. Wins both. Sequence's selective animation isn't clobbered.
-- Add MC press: full takeover at p9. Stage look frozen on MC's scene.
+- Add an announcement-scene press: full takeover at p9. Stage look frozen on that scene.
 - Hold a Punch FX button at p12: momentary override during the press, releases on lift.
 
 The trade-off: when a sequence is active, Effects Pane can't compose with it (sequence's per-fixture intensity wins). That's the right call — sequences are intentional "complete looks" not modular layers.
@@ -458,32 +458,32 @@ def fp_step(palette_name, default_intensity=1.0, intensity_overrides=None):
                           fmt=plistlib.FMT_BINARY)
 ```
 
-### Example: chorus PN1 ↔ PN2 alternate-flash at 78 BPM
+### Example: chorus G1 ↔ G2 alternate-flash at 78 BPM
 
 ```python
 # 4 steps × 1 beat each = 1 bar at 78 BPM (= 0.77s per step)
 chorus_steps = [
-    # All zones uniform 1.0 except PN1/PN2 alternating
-    {'PN1': 1.00, 'PN2': 0.30},
-    {'PN1': 0.30, 'PN2': 1.00},
-    {'PN1': 1.00, 'PN2': 0.30},
-    {'PN1': 0.30, 'PN2': 1.00},
+    # All zones uniform 1.0 except G1/G2 alternating
+    {'G1': 1.00, 'G2': 0.30},
+    {'G1': 0.30, 'G2': 1.00},
+    {'G1': 1.00, 'G2': 0.30},
+    {'G1': 0.30, 'G2': 1.00},
 ]
 seq_preset_uids = [
-    mk_seq_preset(b, f'ITG Chorus step {i+1}',
+    mk_seq_preset(b, f'SongA Chorus step {i+1}',
                   fp_step('Sunset Orange', default_intensity=1.0,
                            intensity_overrides=ovr))
     for i, ovr in enumerate(chorus_steps)
 ]
 # Hold 0.18 + xfade 0.59 = 0.77s = 1 beat at 78 BPM
-seq = mk_sequence(b, 'ITG Chorus Seq', seq_preset_uids,
+seq = mk_sequence(b, 'SongA Chorus Seq', seq_preset_uids,
                   hold=0.18, crossfade=0.59, autoreverses=False)
 ```
 
 ### Example: L→R chase across top bar with neighbour glow
 
 ```python
-TOP = TOP_BAR  # ['P8', 'P9', 'P10', 'P11', 'P12', 'P13']
+TOP = TOP_BAR  # ['T1', 'T2', 'T3', 'T4', 'T5', 'T6']
 bridge_steps = []
 for active_idx in range(len(TOP)):
     overrides = {}
@@ -546,12 +546,12 @@ hold ≫ crossfade   → sharp transitions (good for chorus beat hits, strobes)
 
 | BPM | Beat | 8th | 16th | 1 bar |
 |---|---|---|---|---|
-| 78  (I Thank God / slow worship)    | 0.769s | 0.385s | 0.192s | 3.077s |
-| 100 (mid worship)                   | 0.600s | 0.300s | 0.150s | 2.400s |
+| 78  (slow ballad)    | 0.769s | 0.385s | 0.192s | 3.077s |
+| 100 (mid-tempo)                   | 0.600s | 0.300s | 0.150s | 2.400s |
 | 114 (gospel mid-tempo)              | 0.526s | 0.263s | 0.132s | 2.105s |
 | 120 (common hymn)                   | 0.500s | 0.250s | 0.125s | 2.000s |
-| 127 (PRAISE Elevation)              | 0.472s | 0.236s | 0.118s | 1.890s |
-| 128 (TGIF Elevation Rhythm)         | 0.469s | 0.234s | 0.117s | 1.875s |
+| 127 (up-tempo)                      | 0.472s | 0.236s | 0.118s | 1.890s |
+| 128 (up-tempo)                      | 0.469s | 0.234s | 0.117s | 1.875s |
 
 ### Example: 78 BPM 1-beat-per-step with a snappy feel
 
@@ -624,7 +624,7 @@ panel['name'] = b.raw_str('Modular Panel v20')
 Ordering within a section is worth doing explicitly. Two rules cover most cases:
 
 ```python
-def _level_key(pair):                     # House/Front Wash/Preach rows
+def _level_key(pair):                     # House/Face wash/Speaker rows
     nm = (pair[0] or '').lower()
     if 'off' in nm:
         return -1                          # Off first
@@ -643,9 +643,9 @@ For a symmetric stage, colour looks read as *designed* rather than random when f
 coloured by their **mirrored position**, not their patch order.
 
 ```python
-MIRROR_PAIRS = [('P10','P11'), ('P9','P12'), ('P8','P13'), ('MH2','MH1'), ...]
-POS_X = {'P8': 13, 'P9': 30, ...}          # real stage X from the user's plan
-CENTRE_X = 90.0
+MIRROR_PAIRS = [('T3','T4'), ('T2','T5'), ('T1','T6'), ('MH_L1','MH_R1'), ...]
+POS_X = {'T1': 1.0, 'T2': 2.5, ...}          # x positions from the stage plan (any unit)
+CENTRE_X = 5.0                              # centre line in the same unit
 
 # normalise each pair's distance from centre to t ∈ [0, 1]
 _pd = [(l, r, mean(abs(POS_X[k] - CENTRE_X) for k in {l, r})) for l, r in MIRROR_PAIRS]
@@ -725,7 +725,7 @@ Then re-verify from the written file (see §21).
 ## 20. Composite "one-press" event cues
 
 A single button that changes several feature domains at once — the pattern behind a party or
-worship "mode" — is a cue whose `presets` array spans several groups:
+"mode" cue — is a cue whose `presets` array spans several groups:
 
 ```python
 cue = mk_cue(b, 'PARTY MODE', [
@@ -807,3 +807,174 @@ Properties worth keeping:
 
 Put these sequences in the same mutex group as the static colour looks (§9) — they are
 colour-bearing, so they must release, and be released by, the static bank.
+
+## 23. One-shot cues (flash, then release themselves)
+
+`LXCue.holdDuration` is `-1.0` (infinite) on every cue Lightkey's GUI makes by default. Set it to
+a finite number of seconds and the cue **releases itself** after fade-in + hold — verified on
+real hardware: fire it from a latching button or a MIDI note, it flashes and goes out, and the
+next trigger fires it again. This is the building block for anything driven from a timeline
+(ProPresenter, QLab, a DAW sending notes): the sender only ever has to say "go".
+
+```python
+def one_shot(b, name, presets, hold, tail=0.15, priority=12):
+    cue = mk_cue(b, name, presets, fade_in=0.0, fade_out=tail, priority=priority)
+    b.objs[int(cue)]['holdDuration'] = float(hold)        # finite = auto-release
+    return cue
+```
+
+Rules that came out of building ~30 of them:
+
+* **Priority above every latching look** (the reference project used 12 for one-shots, 10 for
+  show states, 6 for the colour bank). A one-shot then layers over whatever is up and hands
+  back to it on release — no bookkeeping.
+* **Fade-in 0, a short tail** (0.1–0.3 s). Zero tail reads as a click on LEDs; 0.3 s on a colour
+  hit reads as a "bloom". Longer than that and rapid re-fires overlap.
+* **Keep one-shots OUT of the mutex groups.** They are layers, not states; putting them in a
+  rocker group would kick the current state every time one fires.
+* **A sequence inside a one-shot** (a 3-flash burst, an outside→inside wave, a left-right
+  volley): hard cuts are `crossfadeDuration: 0.0`, `holdDuration` per step, and the *cue's*
+  hold is `steps × step_hold` so it releases exactly when the sequence completes. Leave
+  `repeatCount 0` — the cue's hold cuts the loop, and you avoid guessing what a finite repeat
+  does.
+* Every step of a compound one-shot should set the "off" fixtures to `intensity 0.0`
+  explicitly (same fixture set in every step) — that is what makes the cuts hard rather than
+  LTP-blended with whatever is underneath.
+
+## 24. A timeline-driven show block (MIDI notes in, no operator)
+
+The shape that worked for a video opener fired entirely from ProPresenter, sharing the file
+with a hand-operated service panel:
+
+| Kind | Cue mechanics | Group | Priority |
+|---|---|---|---|
+| **Hits / pings / waves** | one-shots (§23), white or a colour family, 0.2–0.5 s | none (layer) | 12 |
+| **States** — dark, idle glows, full-stage colours, chases, strobes | latching, fade 0, `holdDuration -1` | ONE new mutex group (`Show Opener`) | 10 |
+| **Beam positions / beam effects** | latching; PanTilt in the preset | the existing movers rocker, or the show group when they also set the stage | 10 / 6 |
+| **EXIT** | one-shot, hold 0.6 s, fade-out 2.5 s | an "exit member" in **every** group the block touches | 10 |
+
+Design rules, each of which was a bug before it was a rule:
+
+1. **One member per mutex group per cue.** Mutual exclusion is evaluated per *preset*, not per
+   cue (`pitfalls.md` Bug 26). A cue with two presets in the same rocker group risks kicking
+   itself; a cue with members in two groups stays half-active when one member is displaced.
+   So a state = exactly one preset or one sequence in the show group; when a beam effect must
+   also darken the stage, build it as a **single sequence** whose every step carries both the
+   beam values and the stage zeros.
+2. **States are complete looks.** Every stage fixture appears in every state (explicit
+   `intensity 0.0` on the ones that are off). Then the picture is deterministic no matter what
+   the operator left selected underneath — and the fixtures the user asked never to flash are
+   *held* at 0 rather than merely omitted.
+3. **EXIT is how the operator gets the room back.** While a state (priority 10) is up, the
+   colour bank (priority 6) is invisible. EXIT enters every group the block used (kicking the
+   active state and the beam effect), holds dark for 0.6 s, then releases with a 2.5 s
+   fade-out — the stage settles into whatever service look is selected. Without it the
+   volunteer has to know to click the lit state button again.
+4. **Name cues for the MIDI picker, not the panel.** `OP-01 Hit All … OP-52 EXIT` sorts
+   together in Lightkey's cue list and gives the sender a trivial note map
+   (`note = offset + nn`). Test buttons for these live at the *bottom* of the panel — nobody
+   clicks them in a show, they exist for rehearsal and for MIDI-learn.
+5. **Quantise to the track.** With a known BPM, step times are 16ths and 8ths
+   (`60/BPM/4`, `/2`), bursts are `n × 16th`, strobes are `1/16th` on / `1/16th` off (~8.5 Hz
+   at 128 BPM). The chases then sit *on* the music instead of near it.
+6. **Ask which fixtures may strobe.** Audience-facing units and anything the user is worried
+   about (long-throw fresnels, incandescent) go into the "never lit by this block" set and
+   the validator asserts it for every cue in the block.
+
+Binding semantics, from decoding a project's existing MIDI map (`class-schemas.md` →
+Bindings): `activationBehavior 0` = toggle on note, `1` = active while the note is held.
+Toggle + one-shot is the robust pair for senders that emit note-on/note-off in quick
+succession; "while held" only works if the sender holds the note.
+
+## 25. Twin flows: an animated version of a static look, seamlessly
+
+"Warm Glow" (static) and "Warm Glow Flow" (moving) must be the *same* colours or the switch is
+visible. Generating both from the same palette constant is not enough — the user may have
+tweaked the static in the GUI, and intensities drift (0.80 vs 0.82 is a visible step).
+
+Generate the flow **from the static preset's stored values**:
+
+```python
+store = plistlib.loads(bytes(objs[int(static_preset['fpStore'])]))
+umb = store['umbrellaContainers']
+shades = [umb[FIX[l]]['segmentContainers'][0]['color'][0] for l, r, t in RING_PAIRS]  # packed ints, centre→edge
+ring = shades + shades[::-1]                 # mirrored: no colour seam when it wraps
+for k in range(8):
+    st = copy.deepcopy(store)
+    for i, (l, r, t) in enumerate(RING_PAIRS):
+        c = ring[(i + 3 * k) % len(ring)]
+        st['umbrellaContainers'][FIX[l]]['segmentContainers'][0]['color'] = [c]
+        st['umbrellaContainers'][FIX[r]]['segmentContainers'][0]['color'] = [c]
+    steps.append(plistlib.dumps(st, fmt=plistlib.FMT_BINARY))
+assert plistlib.loads(steps[0]) == store       # step 0 IS the static look
+```
+
+* Keep the **packed ints** — decoding to 8-bit and re-packing would round a GUI-picked colour
+  and break the equality.
+* Copy the whole container (intensity, `xfadeToColor`, everything) — only `color` changes.
+* Match the cue fades (2.5 s both) so the crossfade between identical colours is invisible
+  and the movement simply begins.
+* Lay the twins out **column-for-column under the statics** — the panel then documents the
+  relationship without a hint line.
+* Validator: decoded equality of step 0 vs the static, identical fixture sets in every step,
+  and steps 1..n actually differ (it moves).
+
+## 26. Carving into a layout the user likes
+
+§17 covered reusing the button objects. The other half is respecting the *arrangement*:
+
+* **Block shifts, not re-flow.** Remove a row → everything below moves up by that block's
+  height; insert a row → everything below moves down. Relative geometry inside every other
+  block is untouched, so muscle memory survives.
+* **Pre-existing overlaps are not your bug.** GUI-made panels commonly have title boxes that
+  extend 3–4 px under the first button row (the text sits at the top of its box, so it looks
+  fine). A collision check that fails on those blocks all in-place work. Register reused items
+  *without* checking them against each other; check every *new* item strictly against
+  everything. In the validator, fail only on collisions that were not already present in the
+  source (`Validator.no_overlap(ignore_preexisting=True)`).
+* **Re-text a label in place** rather than replacing it: the `NSTextStorage → NSString` is an
+  `NSMutableString`; set its `NS.string`, keep the object. Same for a section you split in two —
+  reuse the existing label as the first title and mint only the second.
+* **Tint carries meaning.** Fixed positions untinted, continuous loops one colour, strobes
+  another — and say so in the section hint (`… (continuous loop · yellow = strobe)`). Changing
+  the tint of a user's button is a deliberate design change: document it and make the
+  validator allow exactly those buttons.
+
+## 27. Strobes and hard-cut chases
+
+* **Hardware strobe** = `definedFeatures` includes `'Shutter'`, segment
+  `{'shutterState': 2, 'strobeSpeed': <Hz>}`. Only fixtures whose personality carries an
+  `LXShutterStrobeCapability` have it (`class-schemas.md` → Fixture profiles). Don't write
+  `Shutter` for fixtures without the capability.
+* **Everything else flashes by sequence**: two steps, ON / OFF, `crossfadeDuration 0.0`,
+  hold ≈ 60 ms each gives ~8 Hz; 120 ms gives ~4 Hz. Lightkey ran the 60 ms version without
+  complaint. Put the hardware-strobe fixtures in the same sequence with *constant* strobe
+  values in both steps — they just hold, and you keep one member per group (§24).
+* **Strobe + movement in one sequence**: a slow `crossfadeDuration` (8 s) with
+  `smoothesFixtureMovements` interpolates pan/tilt while the (identical) strobe values hold —
+  beams strobing as they climb from the floor to the ceiling is a single 2-step sequence with
+  `autoreverses`.
+* **`shutterState 2` means strobe, not closed.** For any "off" write `intensity 0.0` +
+  `shutterState 1` — otherwise a layered cue that raises intensity later inherits a strobe.
+* **Never strobe what the user didn't approve.** Ask which fixtures face the audience; keep
+  the rest of the audience-facing units to one-shot hits (≤ 0.5 s) or out entirely.
+
+## 28. Moving-head position vocabulary
+
+* **Derive new aims from proven ones.** Whatever the user has confirmed on the rig (down on
+  stage, up to ceiling, cross, wide) is your coordinate system — every new position is a
+  variation of those numbers, mirrored with the same `MIRROR` constant. A "scatter" look (each
+  head on a *different* proven aim) is the cheapest way to make four beams look designed.
+* **Per-head dictionaries** `{head: (pan, tilt)}` instead of a mirrored pair make out-of-phase
+  moves possible: a "crowd wave" is the left pair and the right pair sweeping the room half a
+  cycle apart; "searchlights" is four independent slow drifts with high tilts.
+* **`fadeInDuration` on a PanTilt cue is the travel time.** 5 s for service positions (calm),
+  0.3–0.5 s for show snaps. Give the timeline its own snap copies of the positions rather
+  than making the service ones twitchy.
+* **Loops** = `autoreverses True` for out-and-back (sweep, rise), `False` for a closed path
+  (circle, figure-8 through the centre). Keep `smoothesFixtureMovements True` for movement.
+* **Keep tilts high** for anything that runs unattended (≥ 1.0 rad) — beams into haze look
+  intentional; beams across the room at head height blind people. The only low-tilt loops
+  should be floor rakes, which are explicit.
+* Validate: every head present in every step, tilts within the physical range you have seen
+  work, and for "aim high" cues a minimum tilt (`Validator.movers_aim_high`).

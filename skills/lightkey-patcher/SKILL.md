@@ -31,12 +31,13 @@ Two CLI tools are bundled and should usually be your first move on a new file:
 ```bash
 python3 tools/inspect_project.py  <project>.lightkeyproj   # structure, schema, groups
 python3 tools/probe_colour.py     <project>.lightkeyproj   # prove the colour byte order
+python3 tools/inspect_project.py  <project>.lightkeyproj --midi   # bindings, dead ones flagged
 ```
 
 ## Read these three things first
 
 1. **Colour packing is B-low / G-mid / R-high** — blue in bits 0–15, red in bits 32–47.
-   Getting this backwards programmed an entire church rig in blue while every preset was
+   Getting this backwards programmed an entire venue rig in blue while every preset was
    named "red", and it survived several versions because grey/white/amber test colours look
    identical either way. Prove it against a colour the user made in Lightkey's own picker
    before generating a palette. `fpstore-format.md` → Colour packing.
@@ -88,7 +89,7 @@ Read `docs/archive-format.md` first if you haven't worked with NSKeyedArchiver b
 Ask before building. The space of edits is huge. Typical axes:
 
 - **Preservation scope**: keep existing cues/panels/fixtures? Replace some? Replace all?
-- **Targeting**: global (all fixtures) or per-zone (e.g. "front wash only")?
+- **Targeting**: global (all fixtures) or per-zone (e.g. "face wash only")?
 - **Interaction model**: radio groups (one active at a time) or latching (multiple)?
 - **Timing**: static snapshots, beat-synced sequences, or manual-trigger only?
 - **Layer composition**: colour bank + independent effects pane? Sealed song sequences? Both?
@@ -104,7 +105,7 @@ memory on a panel that gets run live is worth real money to them, and only they 
 ### Designing lighting that a volunteer can run
 
 The file being structurally correct is table stakes. What made the difference on a real
-church rig:
+venue rig:
 
 - **Mirror the stage.** House-left and house-right at the same distance from centre get the
   same colour. Asymmetry reads as a fault, not as design. (`patterns.md` §18)
@@ -155,6 +156,22 @@ These were learned the hard way over many iteration cycles. Violate any of them 
 
 12. **`LXTextCanvasItem` has no `rect`** — it is `center` + `unrotatedSize`, and the text renders at its `NSFont` size regardless of the box you declare. Undersized boxes put text under your buttons. See `docs/pitfalls.md` Bug 24.
 
+13. **Every object reference you write must be a `plistlib.UID` instance.** `int(uid)` is handy for dict keys, but a bare int written back into `NS.objects` (or `cue`, `items`, `presets`…) parses fine and makes Lightkey decode the whole array as empty — and it re-saves that emptiness if the user hits ⌘S. `Validator.references_are_uids()` is in `structural_parity()` now. See `docs/pitfalls.md` Bug 27.
+
+14. **One member per mutex group per cue.** Exclusion is evaluated per preset, not per cue: two members of one cue in the same group can displace each other, members in different groups leave the cue half-active. Combined looks are one sequence/preset carrying all the values; a show block gets an EXIT cue with an exit member in every group it touched. See Bug 26 and `docs/patterns.md` §24.
+
+15. **Cues are referenced by UUID from MIDI/key bindings.** Rebuilding a cue "fresh" silently disconnects the user's notes. Modify cues in place; check `tools/inspect_project.py --midi` before and after. See Bug 28.
+
+16. **Never append into a group whose `childNodes` is the shared empty-array singleton** — build the member list first and mint the group last. See Bug 29.
+
+#### Behaviours verified on hardware (safe to design around)
+
+* `LXCue.holdDuration` finite → the cue releases itself (one-shots for MIDI/timeline senders). `patterns.md` §23.
+* `crossfadeDuration 0.0` sequences with ~60 ms steps run (hard-cut chases, strobe-by-sequence). §27.
+* `shutterState 2` + `strobeSpeed` = hardware strobe on fixtures whose personality has `LXShutterStrobeCapability`; `1` = open. There is no proven "closed" — off is intensity 0. `fpstore-format.md`.
+* An animated twin generated from a static preset's stored bytes switches invisibly. §25.
+* Mutual exclusion is per preset member (rule 14). Bindings resolve cues by UUID (rule 15).
+
 #### After every build
 
 1. **Structurally validate.** Re-parse the output. Walk through and check:
@@ -178,16 +195,16 @@ Read `docs/pitfalls.md` before writing the first line of code — it's where the
 Load these as needed — not all at once.
 
 - **`docs/archive-format.md`** — NSKeyedArchiver, `$objects`, `$top`, UID references. **Always read this first** before touching an archive.
-- **`docs/class-schemas.md`** — Exact field schemas for every Lightkey class. Consult before building any of them. **Note: as of this revision, the `name` field on `LXCue` / `LXPreset` / `LXPresetGroup` / `LXSequence` / `LXControlPanel` should be a RAW STRING UID (not an `NSMutableString` wrapper). The class-schemas doc may still show NSMutableString — defer to pitfalls.md Bug 14.**
+- **`docs/class-schemas.md`** — Exact field schemas for every Lightkey class, plus MIDI/key bindings and fixture profiles/capabilities (how to tell from the file whether a fixture can strobe or has a white channel). Consult before building any of them. **Note: as of this revision, the `name` field on `LXCue` / `LXPreset` / `LXPresetGroup` / `LXSequence` / `LXControlPanel` should be a RAW STRING UID (not an `NSMutableString` wrapper). The class-schemas doc may still show NSMutableString — defer to pitfalls.md Bug 14.**
 - **`docs/fpstore-format.md`** — The inner binary plist every `LXPreset` carries. Covers `umbrellaContainers`, the native `effects` array, **colour packing (read this before any palette work)**, moving-head practicalities, the clone-and-retarget pattern.
-- **`docs/patterns.md`** — Architectural patterns: radio groups, LTP layering, beat sequences, colour palettes, per-zone gradients, unified Stage Look mutex, priority stacks, momentary buttons, plus §17–§22: in-place redesign, mirror-pair gradients, collision-checked layout, composite event cues, output validation, and palette-driven flow sequences.
-- **`docs/pitfalls.md`** — Specific mistakes that have crashed Lightkey on open, made the panel render empty, or silently destroyed the user's own work. **Read this BEFORE writing any code.** Bugs 1–20 are decode/render failures; Bugs 21–26 are the ones that bite when rebuilding on a file the user has been editing.
+- **`docs/patterns.md`** — Architectural patterns: radio groups, LTP layering, beat sequences, colour palettes, per-zone gradients, unified Stage Look mutex, priority stacks, momentary buttons, plus §17–§28: in-place redesign, mirror-pair gradients, collision-checked layout, composite event cues, output validation, palette-driven flows, one-shot cues, MIDI/timeline show blocks, twin flows, carving into an existing layout, strobes and hard-cut chases, moving-head position vocabulary.
+- **`docs/pitfalls.md`** — Specific mistakes that have crashed Lightkey on open, made the panel render empty, or silently destroyed the user's own work. **Read this BEFORE writing any code.** Bugs 1–20 are decode/render failures; Bugs 21–29 are the ones that bite when rebuilding on a file the user has been editing (27: ints where UIDs belong, 28: bindings orphaned by rebuilt cues, 29: the shared empty-array singleton).
 
 ## Bundled scripts
 
 - **`lightkey/resolve.py`** — Reusable inspection library. `find_instances(classname)`, `resolve(uid, depth=N)`. Copy into your working directory and `import resolve`.
 - **`lightkey/colour.py`** — `pack_color` / `c8` / `unpack_rgb8` (corrected byte order), anchor+variation palettes, sequence-step builders.
-- **`lightkey/validate.py`** — Ready-made semantic validator (`docs/patterns.md` §21). `Validator(src, out)` then `structural_parity()`, `buttons_resolve()`, `preserved_buttons()`, `no_overlap()`, `labels_fit()`, `mutex_intact([...])`, `cue_in_group()`, `hues_within()`, `depth_stops()`, `movers_aim_high()`, `report()`. Every check accumulates instead of raising, so one run shows every problem. Verified against a real 92-button panel.
+- **`lightkey/validate.py`** — Ready-made semantic validator (`docs/patterns.md` §21). `Validator(src, out)` then `structural_parity()`, `buttons_resolve()`, `preserved_buttons()`, `no_overlap(ignore_preexisting=True)`, `labels_fit()`, `mutex_intact([...])`, `cue_in_group()`, `single_member_in()`, `one_shot()`, `fixtures_dark()`, `hues_within()`, `depth_stops()`, `movers_aim_high()`, `report()`. Every check accumulates instead of raising, so one run shows every problem. Verified against a real 92-button panel.
 - **`tools/inspect_project.py`** — CLI structure dump: object counts, fpStore schema flavour, native-effect histogram, preset groups with their mutex flags, cues, panels. `--fixtures` prints the short-name → UUID map; `--panel` details every button and label; `--classes` flags duplicate class definitions.
 - **`tools/probe_colour.py`** — CLI that decodes every named colour preset under both byte orders and reports which one agrees with the preset names. Also flags presets whose stored colour contradicts their own name — those were written by a patcher with the wrong packing and render the wrong colour on real fixtures.
 - **`tools/extract_effects.py`** — Pull native-effect blobs out of a reference project so they can be cloned verbatim.

@@ -10,8 +10,8 @@
     {
       "name": "lightkey-patcher",
       "source": "./",
-      "description": "Read, inspect and programmatically modify Lightkey .lightkeyproj DMX projects on macOS — format docs, 27 documented failure modes, colour-order probe, and a semantic validator.",
-      "version": "0.1.0",
+      "description": "Read, inspect and programmatically modify Lightkey .lightkeyproj DMX projects on macOS — format docs, 29 documented failure modes, colour-order probe, and a semantic validator.",
+      "version": "0.2.0",
       "category": "productivity",
       "tags": ["lightkey", "dmx", "stage-lighting", "macos", "file-format"]
     }

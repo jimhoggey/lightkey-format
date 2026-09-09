@@ -178,7 +178,7 @@ def fp_step(palette_name, fix_uuid, zones, moving_heads_keys=(),
       - default_intensity OR a per-fixture intensity override
 
     `intensity_overrides` is {fixture_short_name: intensity_float} — used to
-    make selected fixtures pop above/below others (e.g. PN1 bright, PN2 dim).
+    make selected fixtures pop above/below others (e.g. one ground bar bright, its mirror dim).
 
     Returns serialised fpStore bytes.
     """

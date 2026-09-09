@@ -16,7 +16,9 @@ Exact field-by-field schemas for every Lightkey class that can be safely constru
 8. [LXCpanFrame](#lxcpanframe)
 9. [LXTextCanvasItem](#lxtextcanvasitem)
 10. [NSTextStorage](#nstextstorage)
-11. [NSString / NSMutableString / NSUUID / NSArray / NSDictionary / NSSet](#ns-classes)
+11. [Bindings (MIDI, keyboard)](#bindings-midi-keyboard)
+12. [Fixture profiles and capabilities](#fixture-profiles-and-capabilities)
+13. [NSString / NSMutableString / NSUUID / NSArray / NSDictionary / NSSet](#ns-classes)
 
 ---
 
@@ -132,6 +134,17 @@ The primary playable unit — fires one or more presets/sequences with fade-in/o
 
 ---
 
+### Timing fields that matter
+
+* `holdDuration`: `-1.0` = stay active until released (GUI default). **A finite value (seconds)
+  makes the cue release itself** after fade-in + hold — a one-shot. Verified on hardware; see
+  `patterns.md` §23.
+* `fadeInDuration` / `fadeOutDuration`: crossfade in/out. On a cue carrying `PanTilt`, fade-in is
+  the **travel time** of the heads.
+* `priority`: higher wins per feature (LTP inside equal priority). Reference stack in
+  `patterns.md` §12/§24.
+* `activateAtStartup`: the one cue Lightkey fires on open (keep the user's).
+
 ## LXSequence
 
 A beat-synced or time-based cycle through a list of preset-state snapshots.
@@ -186,6 +199,9 @@ BEAT = 60.0 / 127      # 0.4724s per beat
 
 ---
 
+`crossfadeDuration: 0.0` is a valid **hard cut** (chases, bursts, strobes-by-sequence); holds down
+to ~0.06 s ran fine. `smoothesFixtureMovements` only matters when steps carry pan/tilt.
+
 ## LXControlPanel
 
 The container for the on-screen button grid.
@@ -235,6 +251,10 @@ A clickable button on the control panel.
 - There is NO `clusterID` field. Radio behaviour is done via preset-group mutual exclusion, not button-level clustering.
 
 ---
+
+Observed `colorName` values (raw string, or `$null` for no tint): `Gray`, `Orange`, `Red`,
+`Purple`, `Blue`, `Green`, `Yellow`. Tint is a display property only — changing it never affects
+what the button fires.
 
 ## LXCpanFrame
 
@@ -345,6 +365,77 @@ Wraps the text string + its attributes.
 Reuse existing `NSAttributes` from the source file whenever possible.
 
 ---
+
+## Bindings (MIDI, keyboard)
+
+Lightkey stores its trigger map in `$top` under `MIDIBindingsCategory`, `keyBindingsCategory`
+(and `DMXBindingsCategory`). Decoded from a real project:
+
+```python
+LXBindingsCategory {
+    'identifier': 'LXMIDIBindingsCategory',
+    'configurations': [LXBindingsConfiguration],      # NSArray
+    'currentConfiguration': <same object as configurations[0]>,
+    'liveBindingsConfiguration': $null,
+}
+LXBindingsConfiguration {
+    'name': 'Default', 'UUID': NSUUID, 'categoryIdentifier': 'LXMIDIBindingsCategory',
+    'bindings': [LXBinding],
+}
+LXBinding { 'UUID': NSUUID, 'trigger': LXMIDITrigger | LXKeyTrigger, 'action': LXAction }
+LXMIDITrigger {
+    'endpointName': 'Lightkey Input',    # Lightkey's own virtual MIDI port
+    'channel': 0, 'note': 12, 'commandType': 159,     # 159 observed for note messages
+    'feedbackType': 0, 'onOff': False, 'shift': 0, 'triggerType': 0,
+}
+LXKeyTrigger { 'triggerType': 0, 'shortcut': {'keyCode', 'modifierFlags', 'characters', 'charactersIgnoringModifiers'} }
+LXAction { 'params': NSDictionary {'type': 'ToggleCue', 'activationBehavior': 0, 'cueUUID': NSUUID} }
+```
+
+* `activationBehavior`: `0` = toggle on each trigger, `1` = active while held (a momentary
+  "flash" binding was `1`).
+* **Bindings reference cues by `cueUUID`.** A binding whose UUID no longer matches any `LXCue`
+  decodes fine and does nothing — Bug 28. `tools/inspect_project.py --midi` lists them.
+* The same `LXAction` shape is used by panel buttons' `clusterRequiresSelection`-free triggers,
+  so cloning a binding is: copy trigger dict with a new `note`, copy action with a new
+  `cueUUID` object pointing at your cue's UUID bytes, wrap in a new `LXBinding` with a fresh
+  UUID, append to `bindings`. (Not exercised in shipped output yet — the user preferred to map
+  notes in the GUI.)
+
+## Fixture profiles and capabilities
+
+```python
+LXDMXFixture {
+    'shortName': 'MH_R1', 'comments': '...', 'address': 209, 'instanceCount': 1,
+    'UUID': NSUUID,                       # the key used in every fpStore
+    'universeUUID': NSUUID, 'universe': LXDMXUniverse,
+    'fixtureProfileUUID': NSUUID,         # -> LXFixtureProfile.UUID
+    'personalityIndex': 0,                # -> profile.personalities[index]
+    'ignoresMasterIntensity': False, 'flexWidth': 1, 'flexHeight': 1,
+    'panLowerLimit': nan, 'panUpperLimit': nan, 'tiltLowerLimit': nan, 'tiltUpperLimit': nan,
+    'externalReference': '',
+}
+LXFixtureProfile { 'UUID', 'name', 'manufacturer', 'personalities': [LXPersonality] }
+LXPersonality   { 'name', 'capabilities': [LX*Capability] }
+```
+
+Capability classes seen: `LXIntensityCapability`, `LXIntensityFineCapability`,
+`LXColorComponentCapability` (one per colour channel — R, G, B, W…), `LXShutterStrobeCapability`,
+`LXPanCapability` / `LXTiltCapability` (+ `Fine`), `LXPanTiltSpeedCapability`, `LXZoomCapability`,
+`LXCommandCapability`, `LXModeCapability`, `LXCustomCapability`. Each carries `channel` (offset
+within the personality) and `settings` — an array of `LXSetting` with a DMX range and a `params`
+dict.
+
+**Use this to answer "can fixture X do Y?" from the file** instead of guessing: a fixture can
+hardware-strobe iff its personality contains `LXShutterStrobeCapability`; it has a white channel
+iff it has more than three `LXColorComponentCapability` entries (then the `coolWhite` segment key
+applies).
+
+**Decoding the shutter enum:** the `LXShutterStrobeCapability.settings` entries carry
+`params: {'mode': n}` with a DMX range each. The narrow range (a few DMX values, e.g. 0–6 or
+240–255) is *open* — `mode 1`; the wide range is the strobe sweep — `mode 2`. That `mode` is what
+Lightkey writes into a segment's `shutterState`. Hence `1 = open, 2 = strobe (+ strobeSpeed)`;
+no distinct "closed" code has been observed.
 
 ## NS classes
 

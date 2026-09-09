@@ -12,7 +12,7 @@ Usage:
     v.structural_parity()          # class defs, key sets, raw names, root untouched
     v.buttons_resolve()            # every button -> cue -> preset -> fpStore
     v.preserved_buttons()          # source buttons kept, cue/behavior/tint unchanged
-    v.no_overlap()                 # zero collisions between buttons AND labels
+    v.no_overlap(ignore_preexisting=True)   # only NEW collisions fail (§26)
     v.labels_fit()                 # box height >= font size * 1.4
     v.mutex_intact(['v18 Stage Look', 'v18 Movers'])
     v.cue_in_group('Coral', 'v18 Stage Look')
@@ -227,19 +227,48 @@ class Validator:
                 int(self.oA[iu].get('colorName', UID(0)))]
         self.chk(not meta, f'reused buttons keep behavior/tint ({len(meta)} changed)')
 
-    def no_overlap(self, canvas_w=None):
-        """Bug 24 — labels and buttons must not intersect. Checked from the FILE."""
-        boxes = ([('btn', i, self.btn_box(i)) for i in self.buttons()] +
-                 [('lbl', i, self.lbl_box(i)) for i in self.labels()])
-        hits = []
+    def _boxes(self, objs, top):
+        panel = objs[int(top['selectedLivePanel'])]
+        out = []
+        for iu in objs[int(panel['items'])]['NS.objects']:
+            ob = objs[int(iu)]
+            c = R.classname(objs, ob)
+            if c == 'LXCpanButton':
+                out.append(('btn', int(iu), tuple(_nums(objs[int(ob['rect'])]))))
+            elif c == 'LXTextCanvasItem':
+                cx, cy = _nums(objs[int(ob['center'])])
+                w, h = _nums(objs[int(ob['unrotatedSize'])])
+                out.append(('lbl', int(iu), (cx - w / 2, cy - h / 2, w, h)))
+        return out
+
+    @staticmethod
+    def _collisions(boxes):
+        hits = set()
         for a in range(len(boxes)):
             _k1, u1, (x1, y1, w1, h1) = boxes[a]
             for bidx in range(a + 1, len(boxes)):
                 _k2, u2, (x2, y2, w2, h2) = boxes[bidx]
                 if not (x1 >= x2 + w2 or x2 >= x1 + w1 or y1 >= y2 + h2 or y2 >= y1 + h1):
-                    hits.append((u1, u2))
-        self.chk(not hits, f'zero overlap among {len(boxes)} panel items '
-                           f'({len(hits)} collisions) {hits[:3]}')
+                    hits.add((min(u1, u2), max(u1, u2)))
+        return hits
+
+    def no_overlap(self, canvas_w=None, ignore_preexisting=False):
+        """Bug 24 — labels and buttons must not intersect. Checked from the FILE.
+
+        ignore_preexisting=True (patterns.md §26): GUI-made panels often have title boxes that
+        extend 3-4px under the first button row. Those pairs already collide in the SOURCE and
+        are the user's arrangement — only NEW collisions fail."""
+        boxes = self._boxes(self.oB, self.sB['$top'])
+        hits = self._collisions(boxes)
+        if ignore_preexisting:
+            old = self._collisions(self._boxes(self.oA, self.sA['$top']))
+            kept = len(hits & old)
+            hits -= old
+            self.chk(not hits, f'no NEW label/button overlaps among {len(boxes)} items '
+                               f'({len(hits)} new, {kept} pre-existing kept) {sorted(hits)[:3]}')
+        else:
+            self.chk(not hits, f'zero overlap among {len(boxes)} panel items '
+                               f'({len(hits)} collisions) {sorted(hits)[:3]}')
         oob = [u for _k, u, (x, y, w, _h) in boxes
                if x < 0 or y < 0 or (canvas_w and x + w > canvas_w)]
         self.chk(not oob, f'all items on-canvas ({len(oob)} out)')
@@ -338,6 +367,47 @@ class Validator:
         if min_xfade is not None:
             self.chk(xfades and min(xfades) >= min_xfade,
                      f'{cue_name}: movement is slow (xfades={sorted(xfades)})')
+
+    # ---- show-block checks (patterns.md §23-24) --------------------------
+    def one_shot(self, cue_name, max_hold=2.0, priority=None):
+        """A cue meant to flash and release itself: finite hold, snap in."""
+        cu = self.cue_by(cue_name)
+        if not self.chk(cu is not None, f'{cue_name}: cue exists'):
+            return
+        c = self.oB[cu]
+        ok = 0 < c.get('holdDuration', -1.0) <= max_hold and c.get('fadeInDuration') == 0.0
+        if priority is not None:
+            ok = ok and c.get('priority') == priority
+        self.chk(ok, f'{cue_name}: one-shot (hold {c.get("holdDuration")}s, prio {c.get("priority")})')
+
+    def single_member_in(self, cue_name, group_name):
+        """Exactly ONE preset/sequence, and it is in the named mutex group (Bug 26 rule)."""
+        cu, gi = self.cue_by(cue_name), self.group_by(group_name)
+        if not self.chk(cu is not None and gi is not None, f'{cue_name} / {group_name}: both exist'):
+            return
+        members = [int(p) for p in self.oB[int(self.oB[cu]['presets'])]['NS.objects']]
+        children = set(int(c) for c in self.oB[int(self.oB[gi]['childNodes'])]['NS.objects'])
+        self.chk(len(members) == 1 and members[0] in children,
+                 f'{cue_name}: exactly one member, in {group_name}')
+
+    def fixtures_dark(self, cue_name, fixture_uuids):
+        """The given fixtures are never lit by any preset/step of the cue (intensity <= 0)."""
+        cu = self.cue_by(cue_name)
+        if not self.chk(cu is not None, f'{cue_name}: cue exists'):
+            return
+        want = {u.upper() for u in fixture_uuids}
+        lit = set()
+        for pu in self.oB[int(self.oB[cu]['presets'])]['NS.objects']:
+            po = self.oB[int(pu)]
+            steps = ([int(x) for x in self.oB[int(po['childNodes'])]['NS.objects']]
+                     if self.cn(po) == 'LXSequence' else [int(pu)])
+            for su in steps:
+                fp = plistlib.loads(self.oB[int(self.oB[su]['fpStore'])])
+                for fu, cont in fp.get('umbrellaContainers', {}).items():
+                    if fu.upper() in want and any(seg.get('intensity', 0) > 0
+                                                  for seg in cont.get('segmentContainers', [])):
+                        lit.add(fu.upper())
+        self.chk(not lit, f'{cue_name}: protected fixtures never lit ({len(lit)} lit)')
 
     # ---- output --------------------------------------------------------
     def report(self):

@@ -182,6 +182,25 @@ def build_fpstore(fixture_specs):
 
 The returned bytes go into `$objects` as a plain bytes entry (no class wrapper), referenced from the preset's `fpStore` field.
 
+## Segment key vocabulary (everything observed in real files)
+
+| Key | Where | Meaning |
+|---|---|---|
+| `intensity` | segment | 0.0–1.0 |
+| `color` | segment | **list** of one packed 64-bit int (see Colour packing) |
+| `xfadeToColor` | segment | always `1.0` alongside `color` |
+| `coolWhite` | segment | 0.0–1.0, the white channel of an RGB+W fixture; only for fixtures with a 4th `LXColorComponentCapability`. `color (255,255,255)` + `coolWhite 1.0` is the strongest white such a fixture has |
+| `shutterState` | segment | `1` open, `2` strobe (with `strobeSpeed`) — see `class-schemas.md` → Fixture profiles for how to decode it from *your* profile |
+| `strobeSpeed` | segment | Hz; 2–16 seen in GUI-made presets |
+| `panAngle`, `tiltAngle` | segment | radians; sign/mirroring is per rig — derive from aims the user has confirmed |
+| `speedMode`, `vectorSpeed` | fixtureContainer | `1`, `1.0` on every moving-head preset seen; copy them whenever you write `PanTilt` |
+
+`definedFeatures` must list exactly the features whose keys are present: `Color` ↔ `color`,
+`Intensity` ↔ `intensity`, `Shutter` ↔ `shutterState`, `PanTilt` ↔ `panAngle/tiltAngle` (+
+`Speed` with the fixtureContainer speed keys). A feature named without its key, or a key without
+its feature, is the kind of shape Lightkey rejects silently — assert the correspondence in your
+validator.
+
 ## Common segment shapes
 
 ### Intensity-only dimmer
@@ -252,7 +271,7 @@ Learned on a rig of four 105 W beams (540° pan, 180° tilt):
 * **Mirror the pan, not the tilt.** House-right heads take `-pan` of house-left; tilt is
   shared. A single builder covering both sides removes a whole class of asymmetry bugs:
   ```python
-  MOVERS_LEFT, MOVERS_RIGHT = ['MH2', 'MH4'], ['MH1', 'MH3']
+  MOVERS_LEFT, MOVERS_RIGHT = ['MH_L1', 'MH_L2'], ['MH_R1', 'MH_R2']
   def fp_mh(pan_l, tilt, pan_r=None, inten=1.0, off=False):
       pan_r = -pan_l if pan_r is None else pan_r
       ...
@@ -334,8 +353,8 @@ Observed values for `effectClass` and the feature they pair with. The skill has 
 | 1000 | `'Intensity'` | "Dimmer Effect", "Red orange gold slow pulsing" intensity layers — soft pulse curves |
 | 1000 | `'Color'` | "Color Effect", "Crashout Effect", "WaterFall" colour layer — colour cycle / chase |
 | 2000 | `'PanTilt'` | "Purple w moving lights" — moving head movement |
-| 3000 | `'Intensity'` | "Worship just yellow (3) fading", "Worship White Moving (2) 2" — gentler fades |
-| 6000 | `'Color'` | "Sky Blue 2", "Blue", many worship scenes — multi-colour blend |
+| 3000 | `'Intensity'` | a GUI-made yellow fade, a moving-white fade — gentler fades |
+| 6000 | `'Color'` | "Sky Blue", "Blue", most GUI-made colour scenes — multi-colour blend |
 
 ### The `extent` field
 
@@ -452,6 +471,6 @@ def clone_preset(b, name, fp_bytes):
 ## When NOT to use the effects array
 
 - **Static colour scenes** — just set `color` in the segment, no effect needed.
-- **Per-fixture-varying intensity sequences** — use `LXSequence` with multiple step presets that have explicit per-fixture intensities in `umbrellaContainers`. Native effects apply uniformly across their `extent` and can't express "PN1 bright while PN2 dim" alternation.
+- **Per-fixture-varying intensity sequences** — use `LXSequence` with multiple step presets that have explicit per-fixture intensities in `umbrellaContainers`. Native effects apply uniformly across their `extent` and can't express "G1 bright while G2 dim" alternation.
 - **Beat-locked rhythms** — native effects don't BPM-sync. Use sequence step timing derived from BPM (hold + crossfade = beat duration).
 
