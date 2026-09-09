@@ -255,7 +255,8 @@ validator.
 
 ### Moving-head practicalities
 
-Learned on a rig of four 105 W beams (540° pan, 180° tilt):
+Notes for moving-head beams. Pan and tilt ranges vary by fixture; read them from the
+profile rather than assuming, and confirm every aim on the rig:
 
 * **`shutterState`: 1 = open, 2 = STROBE (paired with `strobeSpeed`, Hz).** There is no
   proven "closed" code. Every "off" preset that used `shutterState: 2` only looked closed
@@ -280,10 +281,11 @@ Learned on a rig of four 105 W beams (540° pan, 180° tilt):
   editing every position.
 * **Full feature list** for a position preset is `['Intensity', 'PanTilt', 'Shutter', 'Speed']`,
   with `fixtureContainer = {'speedMode': 1, 'vectorSpeed': 1.0}`.
-* **Reference aims** (verify on the user's rig, but these are a sane starting frame):
-  `pan 0.0 / tilt -1.127` points down onto the stage; `pan -0.526 / tilt 1.571` points up at
-  the ceiling. Tilt ≥ 1.2 is "into the air" — safe, and the only place beams look good
-  through haze.
+* **Aims are radians, and they are rig-specific.** Negative tilt around -1.1 rad tends to
+  point down onto the stage and tilt near +π/2 up at the ceiling, but sign conventions and
+  zero points differ per fixture and per patch. Get two aims confirmed on the actual rig
+  (one down, one up) and derive every other position from those. Tilt above roughly 1.2 rad
+  is "into the air" — safe, and the only place beams look good through haze.
 * **A misaligned head is usually physical.** If one head points somewhere the others don't
   while its stored `panAngle`/`tiltAngle` are identical, the problem is the fixture's own
   pan/tilt home or its mounting — not the file. Say so instead of patching offsets in.
@@ -350,11 +352,11 @@ Observed values for `effectClass` and the feature they pair with. The skill has 
 
 | effectClass | feature | Observed in |
 |---|---|---|
-| 1000 | `'Intensity'` | "Dimmer Effect", "Red orange gold slow pulsing" intensity layers — soft pulse curves |
-| 1000 | `'Color'` | "Color Effect", "Crashout Effect", "WaterFall" colour layer — colour cycle / chase |
-| 2000 | `'PanTilt'` | "Purple w moving lights" — moving head movement |
-| 3000 | `'Intensity'` | a GUI-made yellow fade, a moving-white fade — gentler fades |
-| 6000 | `'Color'` | "Sky Blue", "Blue", most GUI-made colour scenes — multi-colour blend |
+| 1000 | `'Intensity'` | intensity layers on GUI-made scenes — soft pulse curves |
+| 1000 | `'Color'` | colour layers on GUI-made scenes — colour cycle / chase |
+| 2000 | `'PanTilt'` | moving-head movement effects |
+| 3000 | `'Intensity'` | gentler intensity fades |
+| 6000 | `'Color'` | multi-colour blend |
 
 ### The `extent` field
 
@@ -461,7 +463,7 @@ So you can take "Pulse Slow" out of one reference preset, point it at a differen
 
 ### Verbatim clone (no retargeting)
 
-When you want to expose Morten's reference scenes as buttons — "Sky Blue", "Red orange gold pulsing", etc. — just copy the entire fpStore bytes without modification. The original UUIDs in `extent` and `umbrellaContainers` reference the same fixtures (assuming the project's UUIDs are unchanged).
+When you want to expose a reference project's existing scenes as buttons unchanged, just copy the entire fpStore bytes without modification. The original UUIDs in `extent` and `umbrellaContainers` reference the same fixtures (assuming the project's UUIDs are unchanged).
 
 ```python
 def clone_preset(b, name, fp_bytes):

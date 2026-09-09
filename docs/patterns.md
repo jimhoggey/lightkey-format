@@ -644,8 +644,8 @@ coloured by their **mirrored position**, not their patch order.
 
 ```python
 MIRROR_PAIRS = [('T3','T4'), ('T2','T5'), ('T1','T6'), ('MH_L1','MH_R1'), ...]
-POS_X = {'T1': 1.0, 'T2': 2.5, ...}          # x positions from the stage plan (any unit)
-CENTRE_X = 5.0                              # centre line in the same unit
+POS_X = {'T1': 0.0, 'T2': 1.0, ...}         # x position per fixture, any consistent unit
+CENTRE_X = 2.5                              # centre line in the same unit
 
 # normalise each pair's distance from centre to t ∈ [0, 1]
 _pd = [(l, r, mean(abs(POS_X[k] - CENTRE_X) for k in {l, r})) for l, r in MIRROR_PAIRS]

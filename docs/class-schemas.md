@@ -406,7 +406,7 @@ LXAction { 'params': NSDictionary {'type': 'ToggleCue', 'activationBehavior': 0,
 
 ```python
 LXDMXFixture {
-    'shortName': 'MH_R1', 'comments': '...', 'address': 209, 'instanceCount': 1,
+    'shortName': 'MH_R1', 'comments': '...', 'address': 1, 'instanceCount': 1,
     'UUID': NSUUID,                       # the key used in every fpStore
     'universeUUID': NSUUID, 'universe': LXDMXUniverse,
     'fixtureProfileUUID': NSUUID,         # -> LXFixtureProfile.UUID
