@@ -6,10 +6,10 @@
   "description": "Read, inspect and programmatically modify Lightkey .lightkeyproj DMX projects on macOS — reverse-engineered format docs, 29 documented failure modes, colour-order probe, and a semantic validator.",
   "author": {
     "name": "lightkey-format contributors",
-    "url": "https://github.com/jimhoggey/lightkey-format"
+    "url": "https://github.com/jimhoggey/Lightkey-Skill"
   },
-  "homepage": "https://github.com/jimhoggey/lightkey-format",
-  "repository": "https://github.com/jimhoggey/lightkey-format",
+  "homepage": "https://github.com/jimhoggey/Lightkey-Skill",
+  "repository": "https://github.com/jimhoggey/Lightkey-Skill",
   "license": "MIT",
   "keywords": [
     "lightkey",

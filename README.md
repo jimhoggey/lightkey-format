@@ -26,14 +26,14 @@ Two ways. Pick the one that matches how you use Claude.
 Run these two commands:
 
 ```bash
-claude plugin marketplace add jimhoggey/lightkey-format
+claude plugin marketplace add jimhoggey/Lightkey-Skill
 ```
 
 ```bash
 claude plugin install lightkey-patcher@lightkey-format
 ```
 
-Already inside Claude Code? Use `/plugin marketplace add jimhoggey/lightkey-format` and
+Already inside Claude Code? Use `/plugin marketplace add jimhoggey/Lightkey-Skill` and
 `/plugin install lightkey-patcher@lightkey-format` instead — same thing.
 
 Done. Later on, `/plugin marketplace update lightkey-format` updates it and
@@ -44,7 +44,7 @@ Done. Later on, `/plugin marketplace update lightkey-format` updates it and
 Upload a ZIP — no terminal needed.
 
 1. **Download the ZIP:**
-   [**lightkey-patcher-skill.zip**](https://github.com/jimhoggey/lightkey-format/releases/latest/download/lightkey-patcher-skill.zip)
+   [**lightkey-patcher-skill.zip**](https://github.com/jimhoggey/Lightkey-Skill/releases/latest/download/lightkey-patcher-skill.zip)
 2. In Claude, go to **Settings → Capabilities → Skills**
    (called **Customize → Skills** in some versions).
 3. Click **Add**, choose the ZIP you just downloaded, and upload it.
@@ -68,7 +68,7 @@ Nothing to configure. Claude uses it automatically as soon as you mention Lightk
 **As a plain skill, without the plugin system:**
 
 ```bash
-git clone https://github.com/jimhoggey/lightkey-format ~/.claude/lightkey-format
+git clone https://github.com/jimhoggey/Lightkey-Skill ~/.claude/lightkey-format
 mkdir -p ~/.claude/skills
 ln -s ~/.claude/lightkey-format/skills/lightkey-patcher ~/.claude/skills/lightkey-patcher
 ```
@@ -202,7 +202,7 @@ own name — those were written by a patcher with the wrong packing.
 ## Quick start (Python only)
 
 ```bash
-git clone https://github.com/jimhoggey/lightkey-format
+git clone https://github.com/jimhoggey/Lightkey-Skill
 cd lightkey-format
 python3 tools/inspect_project.py ~/Documents/MyProject.lightkeyproj
 ```
